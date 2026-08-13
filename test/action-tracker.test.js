@@ -4,8 +4,20 @@ import { currentAction, detectActions, parseActionDefinitions, updateActionState
 
 test('parses custom temporary and persistent actions', () => {
   const definitions = parseActionDefinitions('kissing | temporary = kiss, kisses\nsleeping | persistent = falls asleep, sleeping');
-  assert.deepEqual(definitions[0], { label: 'kissing', mode: 'temporary', triggers: ['kiss', 'kisses'] });
+  assert.deepEqual(definitions[0], { label: 'kissing', mode: 'temporary', priority: 0, triggers: ['kiss', 'kisses'] });
   assert.equal(definitions[1].mode, 'persistent');
+});
+
+test('higher-priority action wins even when a lower-priority action appears first', () => {
+  const definitions = parseActionDefinitions('walking | temporary | 10 = walks\ndancing | temporary | 50 = dances');
+  const updates = detectActions('Jade walks to the dance floor, then dances.', [{ name: 'Jade' }], definitions);
+  assert.deepEqual(updates, [{ name: 'Jade', label: 'dancing', mode: 'temporary' }]);
+});
+
+test('latest action wins when priorities tie', () => {
+  const definitions = parseActionDefinitions('walking | temporary | 10 = walks\ndancing | temporary | 10 = dances');
+  const updates = detectActions('Jade walks, then dances.', [{ name: 'Jade' }], definitions);
+  assert.deepEqual(updates, [{ name: 'Jade', label: 'dancing', mode: 'temporary' }]);
 });
 
 test('attributes actions to named characters', () => {
