@@ -2,14 +2,14 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export const DEFAULT_ACTION_DEFINITIONS = `walking | temporary = walk, walks, walked, walking, stroll, strolls, strolled, strolling
-sitting | persistent = sit down, sits down, sat down, seated, takes a seat
-standing | persistent = stand up, stands up, stood up, standing
-eating | temporary = eat, eats, ate, eating, takes a bite, chewing
-drinking | temporary = drink, drinks, drank, drinking, takes a sip, sips
-sleeping | persistent = fall asleep, falls asleep, fell asleep, sleeping, asleep
-working | persistent = starts work, working, gets to work
-reading | persistent = starts reading, reading, reads`;
+export const DEFAULT_ACTION_DEFINITIONS = `walking | temporary | 10 = walk, walks, walked, walking, stroll, strolls, strolled, strolling
+sitting | persistent | 20 = sit down, sits down, sat down, seated, takes a seat
+standing | persistent | 20 = stand up, stands up, stood up, standing
+eating | temporary | 40 = eat, eats, ate, eating, takes a bite, chewing
+drinking | temporary | 40 = drink, drinks, drank, drinking, takes a sip, sips
+sleeping | persistent | 100 = fall asleep, falls asleep, fell asleep, sleeping, asleep
+working | persistent | 30 = starts work, working, gets to work
+reading | persistent | 30 = starts reading, reading, reads`;
 
 export function parseActionDefinitions(text = '') {
   const definitions = [];
@@ -17,11 +17,13 @@ export function parseActionDefinitions(text = '') {
     const line = rawLine.trim();
     if (!line || line.startsWith('#')) continue;
     const [left, ...rightParts] = line.split('=');
-    const [labelPart, modePart = 'temporary'] = left.split('|');
+    const [labelPart, modePart = 'temporary', priorityPart = '0'] = left.split('|');
     const label = labelPart?.trim().toLocaleLowerCase();
     const mode = modePart.trim().toLocaleLowerCase();
+    const parsedPriority = Number(priorityPart.trim());
+    const priority = Number.isFinite(parsedPriority) ? parsedPriority : 0;
     const triggers = rightParts.join('=').split(',').map(item => item.trim()).filter(Boolean);
-    if (label && ['temporary', 'persistent'].includes(mode) && triggers.length) definitions.push({ label, mode, triggers });
+    if (label && ['temporary', 'persistent'].includes(mode) && triggers.length) definitions.push({ label, mode, priority, triggers });
   }
   return definitions;
 }
@@ -38,13 +40,16 @@ export function detectActions(text, characters, definitions) {
       for (const definition of definitions) {
         for (const trigger of definition.triggers) {
           const match = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(trigger)}(?![\\p{L}\\p{N}_])`, 'iu').exec(segment);
-          if (match) last = { name: character.name, label: definition.label, mode: definition.mode, index: segmentIndex * 10000 + match.index };
+          if (match) {
+            const candidate = { name: character.name, label: definition.label, mode: definition.mode, priority: definition.priority ?? 0, index: segmentIndex * 10000 + match.index };
+            if (!last || candidate.priority > last.priority || (candidate.priority === last.priority && candidate.index >= last.index)) last = candidate;
+          }
         }
       }
     });
     if (last) updates.push(last);
   }
-  return updates.sort((a, b) => a.index - b.index).map(({ index, ...update }) => update);
+  return updates.sort((a, b) => a.index - b.index).map(({ index, priority, ...update }) => update);
 }
 
 export function updateActionStates(previous = {}, roster = [], updates = []) {
