@@ -37,12 +37,14 @@ Use **Add to scene**, **Remove from scene**, or **Clear scene** when prose is am
 Action definitions are editable in extension settings:
 
 ```text
-walking | temporary = walk, walks, walked, walking
-sitting | persistent = sit down, sits down, sat down, seated
-kissing | temporary = kiss, kisses, kissed, kissing
+walking | temporary | 10 = walk, walks, walked, walking
+sitting | persistent | 20 = sit down, sits down, sat down, seated
+kissing | temporary | 100 = kiss, kisses, kissed, kissing
 ```
 
 The action name on the left must match the sprite label/filename. Add custom actions by adding another line; no extension update is required.
+
+The optional numeric priority selects the most important action when several occur in one response. Higher numbers win; tied actions use the one mentioned latest. Definitions without a priority remain valid and default to `0`.
 
 - `temporary`: lasts for the current analyzed turn, then returns to the prior persistent action or neutral.
 - `persistent`: remains until replaced by another persistent action or manually reset.
