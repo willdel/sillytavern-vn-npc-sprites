@@ -10,10 +10,10 @@ export async function getSprites(name, { force = false } = {}) {
   return result;
 }
 
-export function chooseSprite(sprites, preferredLabel = 'neutral') {
+export function chooseSprite(sprites, preferredLabel = 'neutral', alternateLabels = []) {
   if (!sprites.length) return null;
-  const wanted = preferredLabel.trim().toLocaleLowerCase();
-  return sprites.find(sprite => String(sprite.label).toLocaleLowerCase() === wanted)
+  const wanted = [preferredLabel, ...alternateLabels].map(label => String(label ?? '').trim().toLocaleLowerCase()).filter(Boolean);
+  return wanted.map(label => sprites.find(sprite => String(sprite.label).toLocaleLowerCase() === label)).find(Boolean)
     ?? sprites.find(sprite => ['neutral', 'default'].includes(String(sprite.label).toLocaleLowerCase()))
     ?? sprites[0];
 }
