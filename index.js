@@ -48,7 +48,7 @@ function saveScene(scene) {
 
 function updateRosterUi(scene = getScene()) {
   const text = scene.roster.length ? scene.roster.join(', ') : 'No tracked characters.';
-  $('#vn_npc_roster').text(`${text}${scene.location ? ` â€” ${scene.location}` : ''}`);
+  $('#vn_npc_roster').text(`${text}${scene.location ? ` - ${scene.location}` : ''}`);
 }
 
 function populateCharacterPicker() {
