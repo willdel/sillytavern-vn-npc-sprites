@@ -55,6 +55,8 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 .vn-npc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
 .vn-npc-settings textarea { resize: vertical; }
 .vn-npc-settings small { display: block; opacity: 0.75; }
+.vn-npc-roster-panel { display: grid; gap: 0.35rem; margin: 0.5rem 0; }
+#vn_npc_roster { padding: 0.5rem; border: 1px solid var(--SmartThemeBorderColor); border-radius: 6px; }
 
 @keyframes vn-npc-fade-in {
   from { opacity: 0; transform: translateY(8px); }
