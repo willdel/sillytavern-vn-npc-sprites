@@ -113,3 +113,5 @@ Run `npm test` with Node.js 20 or newer.
 
 Built against SillyTavern's `release` branch in August 2026. License: GPL-3.0.
 
+Possible issues and future enhancement ideas are collected in [POSSIBLE-ISSUES.md](POSSIBLE-ISSUES.md).
+
