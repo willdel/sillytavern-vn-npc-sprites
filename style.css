@@ -1,6 +1,6 @@
 #vn-npc-sprite-layer {
   position: fixed;
-  inset: var(--topBarBlockSize) 0 0;
+  inset: var(--topBarBlockSize) 0 40dvh;
   display: none;
   align-items: flex-end;
   justify-content: center;
@@ -15,9 +15,7 @@ body.vn-npc-routing-active #expression-wrapper,
 body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 
 #vn-npc-sprite-layer .vn-npc-sprite {
-  position: relative;
-  bottom: 100px;
-  height: 90dvh;
+  height: 100%;
   max-width: min(90vw, 900px);
   margin: 0;
   display: flex;
