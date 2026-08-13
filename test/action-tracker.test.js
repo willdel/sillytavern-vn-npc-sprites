@@ -14,6 +14,12 @@ test('attributes actions to named characters', () => {
   assert.deepEqual(updates, [{ name: 'Jade', label: 'walking', mode: 'temporary' }, { name: 'Bunny', label: 'kissing', mode: 'temporary' }]);
 });
 
+test('detects pronoun-only action narration in a single-character scene', () => {
+  const definitions = parseActionDefinitions('walking | temporary = walks, walking');
+  const updates = detectActions('She walks toward the door.', [{ name: 'Jade' }], definitions);
+  assert.deepEqual(updates, [{ name: 'Jade', label: 'walking', mode: 'temporary' }]);
+});
+
 test('temporary actions expire on the next update', () => {
   const first = updateActionStates({}, ['Jade'], [{ name: 'Jade', label: 'walking', mode: 'temporary' }]);
   assert.equal(currentAction(first.Jade), 'walking');
