@@ -23,3 +23,11 @@ test('aliases resolve to existing character cards', () => {
   assert.equal(parseAliases('Ms. Carter = Shannon').get('Ms. Carter'), 'Shannon');
   assert.equal(detectNpc('Ms. Carter — Sit down.', buildCandidates(characters, 'Ms. Carter = Shannon')).name, 'Shannon');
 });
+
+test('ignores internal state metadata when resolving visible narration', () => {
+  const candidates = buildCandidates([...characters, { name: 'Sadie', avatar: 'Sadie.png' }, { name: 'Tessa', avatar: 'Tessa.png' }]);
+  const text = 'Sadie looks back at you.\n\n🎬 INTERNAL STATES (Turn: 2)\n-Sadie | Circle: Tessa social circle';
+  const result = detectNpc(text, candidates);
+  assert.equal(result.name, 'Sadie');
+  assert.equal(result.reason, 'unique-mention');
+});
