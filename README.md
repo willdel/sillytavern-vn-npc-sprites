@@ -10,6 +10,7 @@ A third-party UI extension that displays lorebook-driven NPCs in Visual Novel mo
 - Expression/action sprites with character-card avatar fallback.
 - Editable aliases and action definitions.
 - Automatic background selection from structured Location headers.
+- Persistent, configurable per-character outfit tracking and manual correction.
 - Manual scene and action correction controls.
 - No SillyTavern core modifications or external service dependency.
 
@@ -64,12 +65,40 @@ Old Market District - General Store = general-store.webp
 
 When an AI message contains a structured `Location` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. Matching ignores capitalization, repeated spaces, and typographic dash variants, but otherwise remains exact. This prevents a location that is merely mentioned in narration from changing the background. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
 
+## Outfit sprites
+
+Outfits are persistent per character and use editable definitions:
+
+```text
+casual | 10 = casual clothes, everyday clothes, jeans, shorts
+uniform | 40 = uniform, work clothes, apron, scrubs
+swimwear | 60 = swimwear, swimsuit, bikini
+sleepwear | 70 = pajamas, nightgown, underwear, lingerie
+nude | 100 = nude, naked, unclothed, no clothes
+```
+
+Higher priorities win when a response contains multiple outfit triggers; equal priorities use the latest trigger. In multi-character scenes, a trigger must occur in narration associated with the named character. Outfit state remains unchanged when no trigger is detected. Use **Set outfit** or **Reset outfit** to correct ambiguous narration manually.
+
+The configured default outfit (initially `casual`) uses existing unprefixed sprites. Other outfits use `outfit_state` labels:
+
+```text
+neutral.webp
+joy.webp
+walking.webp
+swimwear_neutral.webp
+swimwear_joy.webp
+swimwear_walking.webp
+```
+
+Selection order is outfit action, outfit expression, outfit neutral, unprefixed action, unprefixed expression, unprefixed neutral, then the character-card avatar. Custom outfit categories can be added to the definitions without updating the extension.
+
 ## Architecture
 
 - `detection.js`: character names and aliases.
 - `scene-tracker.js`: entrances, exits, locations, and roster transitions.
 - `action-tracker.js`: configurable action parsing and state transitions.
 - `background-tracker.js`: exact Location-header background mappings.
+- `outfit-tracker.js`: configurable persistent clothing detection.
 - `sprites.js`: sprite inventory and fallback selection.
 - `renderer.js`: five-character scene layout and active-speaker focus.
 - `index.js`: SillyTavern events, settings, persistence, and orchestration.
