@@ -18,10 +18,17 @@
       <input id="vn_npc_fallback" class="text_pole" type="text" placeholder="neutral">
       <label for="vn_npc_aliases">Aliases (one per line: Alias = Card Name)</label>
       <textarea id="vn_npc_aliases" class="text_pole" rows="4" placeholder="Ms. Carter = Shannon"></textarea>
+      <label class="checkbox_label" for="vn_npc_actions_enabled">
+        <input id="vn_npc_actions_enabled" type="checkbox">
+        <span>Enable action sprite tracking</span>
+      </label>
+      <label for="vn_npc_action_definitions">Actions (action | temporary/persistent = trigger phrases)</label>
+      <textarea id="vn_npc_action_definitions" class="text_pole" rows="9"></textarea>
       <div class="vn-npc-actions">
         <button id="vn_npc_test" class="menu_button" type="button">Test latest AI message</button>
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>
         <button id="vn_npc_remove" class="menu_button" type="button">Remove from scene</button>
+        <button id="vn_npc_reset_action" class="menu_button" type="button">Reset action</button>
         <button id="vn_npc_clear" class="menu_button" type="button">Clear scene</button>
       </div>
       <small id="vn_npc_status">Waiting for an AI message.</small>
