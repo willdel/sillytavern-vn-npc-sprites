@@ -1,0 +1,46 @@
+#vn-npc-sprite-layer {
+  position: fixed;
+  inset: var(--topBarBlockSize) 0 0;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+body.waifuMode #vn-npc-sprite-layer.has-sprites { display: flex; }
+
+body.vn-npc-routing-active #expression-wrapper,
+body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
+
+#vn-npc-sprite-layer .vn-npc-sprite {
+  height: 90dvh;
+  max-width: min(90vw, 900px);
+  margin: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  filter: drop-shadow(2px 2px 2px #51515199);
+  animation: vn-npc-fade-in 180ms ease-out;
+}
+
+#vn-npc-sprite-layer img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.vn-npc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.vn-npc-settings textarea { resize: vertical; }
+.vn-npc-settings small { display: block; opacity: 0.75; }
+
+@keyframes vn-npc-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1000px) {
+  #vn-npc-sprite-layer { display: none !important; }
+}
