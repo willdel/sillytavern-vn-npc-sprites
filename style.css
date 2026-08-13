@@ -38,6 +38,13 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   z-index: 3;
 }
 
+#vn-npc-sprite-layer .vn-npc-sprite.is-card-avatar img {
+  height: auto;
+  max-height: 100%;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
 #vn-npc-sprite-layer img {
   width: 100%;
   height: 100%;
