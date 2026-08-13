@@ -134,17 +134,17 @@ async function renderScene(scene, candidates) {
   }
 }
 
-async function routeText(text) {
+async function routeText(sceneText, responseText = sceneText) {
   const config = settings();
   const library = characterLibrary.length ? characterLibrary : await refreshCharacterLibrary();
   const candidates = buildCandidates(library, config.aliases);
-  const analysis = analyzeScene(text, candidates);
+  const analysis = analyzeScene(sceneText, candidates);
   const previous = getScene();
   const scene = updateScene(previous, analysis, { limit: 5 });
   const definitions = parseActionDefinitions(config.actionDefinitions);
-  const actionUpdates = config.actionsEnabled ? detectActions(text, scene.roster.map(name => ({ name })), definitions) : [];
+  const actionUpdates = config.actionsEnabled ? detectActions(responseText, scene.roster.map(name => ({ name })), definitions) : [];
   scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
-  const expressionUpdates = await classifyExpressions(text, scene.roster, config);
+  const expressionUpdates = await classifyExpressions(responseText, scene.roster, config);
   scene.expressionStates = updateExpressionStates(scene.locationChanged ? {} : previous.expressionStates, scene.roster, expressionUpdates);
   saveScene(scene);
   await renderScene(scene, candidates);
@@ -156,14 +156,16 @@ async function routeText(text) {
     expressionUpdates.length ? `expressions ${expressionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
   ].filter(Boolean).join('; ');
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
+  if (config.expressionsEnabled && !expressionUpdates.length) $('#vn_npc_status').append(' Expression classifier returned no label; using sprite fallback.');
 }
 
 async function classifyExpressions(text, roster, config) {
   if (!config.expressionsEnabled || !roster.length) return [];
   try {
     const { getExpressionLabel } = await import('../../expressions/index.js');
-    const samples = expressionSamples(text, roster);
-    if (roster.length === 1 && !samples.has(roster[0])) samples.set(roster[0], String(text).split(/^.*INTERNAL STATES.*$/imu, 1)[0]);
+    const samples = roster.length === 1
+      ? new Map([[roster[0], String(text).split(/^.*INTERNAL STATES.*$/imu, 1)[0]]])
+      : expressionSamples(text, roster);
     return (await Promise.all([...samples].map(async ([name, sample]) => ({ name, label: await getExpressionLabel(sample, undefined, { filterAvailable: false }) })))).filter(item => item.label);
   } catch (error) {
     console.warn(`[${MODULE_NAME}] Character Expressions classification unavailable.`, error);
@@ -184,7 +186,7 @@ function latestSceneText(messageId) {
 }
 
 async function onCharacterMessage(messageId) {
-  await routeText(latestSceneText(messageId));
+  await routeText(latestSceneText(messageId), latestAiText(messageId));
 }
 
 function bindSettings() {
@@ -214,7 +216,7 @@ function bindSettings() {
     config.actionDefinitions = this.value;
     context.saveSettingsDebounced();
   });
-  $('#vn_npc_test').on('click', () => routeText(latestSceneText()));
+  $('#vn_npc_test').on('click', () => routeText(latestSceneText(), latestAiText()));
   $('#vn_npc_add').on('click', async () => {
     const name = String($('#vn_npc_character').val() ?? '');
     if (!name) return;
