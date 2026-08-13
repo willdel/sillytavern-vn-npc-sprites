@@ -6,6 +6,24 @@ const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
 const DEFAULTS = Object.freeze({ enabled: true, allowMentionFallback: true, fallbackLabel: 'neutral', aliases: '' });
 let context;
+let characterLibrary = [];
+
+async function refreshCharacterLibrary() {
+  try {
+    const response = await fetch('/api/characters/all', {
+      method: 'POST',
+      headers: context.getRequestHeaders(),
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) throw new Error(`Character lookup failed (${response.status})`);
+    const characters = await response.json();
+    characterLibrary = Array.isArray(characters) ? characters : [];
+  } catch (error) {
+    console.warn(`[${MODULE_NAME}] Falling back to the loaded character list.`, error);
+    characterLibrary = context.characters;
+  }
+  return characterLibrary;
+}
 
 function settings() {
   context.extensionSettings[MODULE_NAME] ??= structuredClone(DEFAULTS);
@@ -28,7 +46,8 @@ async function routeText(text) {
     return setStatus('Detected message, but Visual Novel mode is off.');
   }
 
-  const candidates = buildCandidates(context.characters, config.aliases);
+  const library = characterLibrary.length ? characterLibrary : await refreshCharacterLibrary();
+  const candidates = buildCandidates(library, config.aliases);
   const match = detectNpc(text, candidates, { allowMentionFallback: config.allowMentionFallback });
   if (!match) {
     clearNpcSprites();
@@ -93,7 +112,11 @@ async function initialize() {
   context.eventSource.on(context.eventTypes.MESSAGE_SWIPED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.MESSAGE_EDITED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, clearNpcSprites);
-  context.eventSource.on(context.eventTypes.CHARACTER_EDITED, clearSpriteCache);
+  context.eventSource.on(context.eventTypes.CHARACTER_EDITED, async () => {
+    clearSpriteCache();
+    await refreshCharacterLibrary();
+  });
+  await refreshCharacterLibrary();
 }
 
 export function onDisable() {
