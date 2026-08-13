@@ -52,3 +52,30 @@ Expected fallback behavior while a non-default outfit is active:
 
 Investigate whether the outfit expression label is unavailable, mismatched, or skipped when the requested action sprite is missing. The active outfit state should remain authoritative during sprite fallback.
 
+## 4. Automatic backgrounds can stop updating or reporting status
+
+**Status:** Open possible regression
+
+Automatic background selection may stop changing the background after previously working. Background information also disappears from the extension's test/status output, including both successful mappings and unmatched-location notices.
+
+Investigate whether Location-header processing is still running on new messages and test-button execution after the outfit-tracking update. Also verify that background settings survive extension updates and that status messages from sprite, expression, action, or outfit processing are not replacing the background result.
+
+Useful evidence for later diagnosis includes the complete Location header, configured background mapping, current background filename, and full **Test latest AI message** output.
+
+## 5. Persistent outfit state can revert without a clothing change
+
+**Status:** Open possible regression
+
+A character's detected outfit may apply for one response but revert to default clothing or an unprefixed expression sprite in a later response, even though the narration does not describe the character getting dressed or otherwise changing clothes.
+
+Example: a character is detected as nude in one response. The following response contains no clothing change, but the displayed sprite returns to the default expression/outfit.
+
+Investigate outfit-state storage and restoration across message processing, scene updates, location handling, chat switching, and extension reloads. Distinguish between these possibilities:
+
+- The saved outfit state is being reset to the configured default.
+- The outfit remains saved but sprite selection ignores it.
+- A scene/location reset creates a new outfit state even though the character remains present.
+- The character name is temporarily missing from the roster, causing its outfit state to be discarded and recreated.
+
+Expected behavior: an outfit remains active until a new outfit is reliably detected or the user manually resets/changes it.
+
