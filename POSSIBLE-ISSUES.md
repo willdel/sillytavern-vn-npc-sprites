@@ -35,3 +35,20 @@ Possible approaches to evaluate later:
 - Process the lookback chronologically, including entrance, exit, and location-change events.
 - Store explicit scene-state checkpoints rather than re-detecting names from isolated messages.
 
+## 3. Missing action sprite can discard the active outfit
+
+**Status:** Open possible bug
+
+When a character has a persistent non-default outfit and performs an action without a corresponding outfit/action sprite, the renderer can fall back to an unprefixed expression sprite and visually discard the active outfit.
+
+Example: a nude character is showering, but `nude_showering` does not exist. The extension displays an ordinary expression sprite instead of retaining the nude outfit.
+
+Expected fallback behavior while a non-default outfit is active:
+
+1. `outfit_action`
+2. `outfit_expression`
+3. `outfit_neutral`
+4. Only then consider unprefixed sprites or the character-card avatar
+
+Investigate whether the outfit expression label is unavailable, mismatched, or skipped when the requested action sprite is missing. The active outfit state should remain authoritative during sprite fallback.
+
