@@ -28,6 +28,10 @@ Character Expressions must already contain sprites for the matching card name. T
 
 Emotion changes reuse the classifier selected in SillyTavern's built-in **Character Expressions** settings. Configure that classifier there; selecting `None` leaves the configured neutral fallback in use. In single-character scenes the whole visible response is classified. In multi-character scenes each character's named narration is classified separately and retained until it changes.
 
+## Suggestions
+
+I use the [Freaky Frankenstein 5.2 Bolt preset](https://www.reddit.com/r/SillyTavernAI/comments/1vmc07f/preset_update_freaky_frankenstein_52_the_first/). Its structured response header includes location information that works well with the extension's Location-header scene and background tracking. The preset is recommended, but it is not required to use the extension.
+
 ## Scene tracking
 
 The extension keeps a separate persistent roster for each chat. Explicit speakers and physical-presence cues add characters; exit cues remove them. A location change clears the old roster before adding characters at the new location. Ordinary conversational references do not add sprites.
