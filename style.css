@@ -4,6 +4,7 @@
   display: none;
   align-items: flex-end;
   justify-content: center;
+  gap: clamp(0px, 0.6vw, 10px);
   overflow: hidden;
   pointer-events: none;
   z-index: 2;
@@ -16,13 +17,25 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 
 #vn-npc-sprite-layer .vn-npc-sprite {
   height: 100%;
-  max-width: min(90vw, 900px);
+  min-width: 0;
+  max-width: min(20vw, 420px);
+  flex: 1 1 20%;
   margin: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   filter: drop-shadow(2px 2px 2px #51515199);
   animation: vn-npc-fade-in 180ms ease-out;
+}
+
+#vn-npc-sprite-layer .vn-npc-sprite:not(.is-active) {
+  filter: brightness(0.78) drop-shadow(2px 2px 2px #51515199);
+  transform: scale(0.94);
+  transform-origin: center bottom;
+}
+
+#vn-npc-sprite-layer .vn-npc-sprite.is-active {
+  z-index: 3;
 }
 
 #vn-npc-sprite-layer img {
