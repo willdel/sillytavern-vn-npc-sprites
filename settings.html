@@ -44,7 +44,7 @@
       </label>
       <label for="vn_npc_background_mappings">Backgrounds (Location = uploaded background filename)</label>
       <textarea id="vn_npc_background_mappings" class="text_pole" rows="6" placeholder="Bedroom = bedroom.webp&#10;Driftline Beach - North Cove Path = north-cove.webp"></textarea>
-      <small>Matching is exact (ignoring capitalization, extra spaces, and dash style). Unmatched locations keep the current background.</small>
+      <small>Each term must appear in the Location header. Use + to require multiple terms, such as Sunset Shores Apartments + Pool. More-specific mappings win. Unmatched locations keep the current background.</small>
       <div class="vn-npc-actions">
         <button id="vn_npc_test" class="menu_button" type="button">Test latest AI message</button>
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>
