@@ -18,6 +18,17 @@ export function chooseSprite(sprites, preferredLabel = 'neutral', alternateLabel
     ?? sprites[0];
 }
 
+export function chooseOutfitSprite(sprites, { outfit, defaultOutfit = 'casual', action, expression, fallback = 'neutral' } = {}) {
+  if (!sprites.length) return null;
+  const normalizedOutfit = String(outfit ?? defaultOutfit).trim().toLocaleLowerCase();
+  const normalizedDefault = String(defaultOutfit ?? 'casual').trim().toLocaleLowerCase();
+  const states = [action, expression, fallback].map(value => String(value ?? '').trim().toLocaleLowerCase()).filter(Boolean);
+  const labels = normalizedOutfit && normalizedOutfit !== normalizedDefault
+    ? [...states.map(state => `${normalizedOutfit}_${state}`), `${normalizedOutfit}_neutral`, ...states]
+    : states;
+  return chooseSprite(sprites, labels[0], labels.slice(1));
+}
+
 export function clearSpriteCache() {
   cache.clear();
 }
@@ -26,3 +37,4 @@ export function getCardAvatarPath(character) {
   const avatar = String(character?.avatar ?? '').trim();
   return avatar && avatar !== 'none' ? `/characters/${encodeURIComponent(avatar)}` : null;
 }
+
