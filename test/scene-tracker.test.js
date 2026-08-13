@@ -10,6 +10,13 @@ test('ordinary conversational mentions do not add a character', () => {
   assert.deepEqual(analysis.entrances.map(item => item.name), []);
 });
 
+test('detects multiple physically present characters but not a remote business owner', () => {
+  const text = 'Sheri watches Jade from the rocks. Jade walks a few steps closer. Bunny runs the cafe downtown. Jade pivots toward you.';
+  const sceneCandidates = buildCandidates(['Sheri', 'Jade', 'Bunny'].map(name => ({ name })));
+  const analysis = analyzeScene(text, sceneCandidates);
+  assert.deepEqual(analysis.entrances.map(item => item.name), ['Sheri', 'Jade']);
+});
+
 test('physical action adds a character and an exit removes one', () => {
   const entered = updateScene({ roster: [], location: null }, analyzeScene('Sadie taps her phone and looks at you.', candidates));
   assert.deepEqual(entered.roster, ['Sadie']);
