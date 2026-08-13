@@ -43,7 +43,7 @@ export function detectNpcs(text, candidates, { allowMentionFallback = true, limi
   const explicitSpeakers = [];
   for (const candidate of candidates) {
     const token = boundaryPattern(candidate.token);
-    const speaker = new RegExp(`(?:^|\\n)\\s*(?:[*_>~-]+\\s*)?${token}\\s*(?::|â€”|â€“|-)`, 'iu');
+    const speaker = new RegExp(`(?:^|\\n)\\s*(?:[*_>~-]+\\s*)?${token}\\s*(?::|\\u2014|\\u2013|-)`, 'iu');
     const match = speaker.exec(source);
     if (match) explicitSpeakers.push({ ...candidate, reason: 'explicit-speaker', index: match.index });
   }
