@@ -7,6 +7,11 @@ test('prefers a requested expression sprite', () => {
   assert.equal(chooseSprite(sprites, 'joy').path, '/joy.png');
 });
 
+test('falls back from a missing action to the current expression', () => {
+  const sprites = [{ label: 'neutral', path: '/neutral.png' }, { label: 'joy', path: '/joy.png' }];
+  assert.equal(chooseSprite(sprites, 'walking', ['joy']).path, '/joy.png');
+});
+
 test('builds a full character-card avatar fallback path', () => {
   assert.equal(getCardAvatarPath({ avatar: 'Laura Card.png' }), '/characters/Laura%20Card.png');
   assert.equal(getCardAvatarPath({ avatar: 'none' }), null);
