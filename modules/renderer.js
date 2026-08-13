@@ -25,7 +25,7 @@ export function renderNpcSprites(items) {
   root.replaceChildren();
   for (const item of centerActiveSprite(items.slice(0, 5))) {
     const figure = document.createElement('figure');
-    figure.className = `vn-npc-sprite${item.active ? ' is-active' : ''}`;
+    figure.className = `vn-npc-sprite${item.active ? ' is-active' : ''}${item.cardAvatar ? ' is-card-avatar' : ''}`;
     figure.dataset.character = item.name;
     figure.dataset.detection = item.reason;
     const image = document.createElement('img');
