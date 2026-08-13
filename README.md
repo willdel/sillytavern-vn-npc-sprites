@@ -9,6 +9,7 @@ A third-party UI extension that displays lorebook-driven NPCs in Visual Novel mo
 - Active-speaker focus and multi-character layout.
 - Expression/action sprites with character-card avatar fallback.
 - Editable aliases and action definitions.
+- Automatic background selection from structured Location headers.
 - Manual scene and action correction controls.
 - No SillyTavern core modifications or external service dependency.
 
@@ -51,11 +52,24 @@ The optional numeric priority selects the most important action when several occ
 
 Sprite resolution order is detected action, configured neutral/default expression, first available sprite, then character-card avatar. Use **Reset action** for manual correction.
 
+## Dynamic backgrounds
+
+Upload backgrounds normally in SillyTavern, then add exact mappings in the extension settings:
+
+```text
+Bedroom = bedroom.webp
+Driftline Beach - North Cove Path = north-cove.webp
+Old Market District - General Store = general-store.webp
+```
+
+When an AI message contains a structured `Location` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. Matching ignores capitalization, repeated spaces, and typographic dash variants, but otherwise remains exact. This prevents a location that is merely mentioned in narration from changing the background. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
+
 ## Architecture
 
 - `detection.js`: character names and aliases.
 - `scene-tracker.js`: entrances, exits, locations, and roster transitions.
 - `action-tracker.js`: configurable action parsing and state transitions.
+- `background-tracker.js`: exact Location-header background mappings.
 - `sprites.js`: sprite inventory and fallback selection.
 - `renderer.js`: five-character scene layout and active-speaker focus.
 - `index.js`: SillyTavern events, settings, persistence, and orchestration.
@@ -65,3 +79,4 @@ Sprite resolution order is detected action, configured neutral/default expressio
 Run `npm test` with Node.js 20 or newer.
 
 Built against SillyTavern's `release` branch in August 2026. License: GPL-3.0.
+
