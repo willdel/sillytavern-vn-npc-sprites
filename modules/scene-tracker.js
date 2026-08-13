@@ -10,7 +10,7 @@ export function visibleNarration(text) {
 }
 
 export function extractLocation(text) {
-  const match = visibleNarration(text).match(/(?:^|\|)\s*(?:ðŸ“\s*)?Location\s*[: ]\s*([^|\]\n]+)/iu);
+  const match = visibleNarration(text).match(/\bLocation\s*[: ]\s*([^|\]\n]+)/iu);
   return match?.[1]?.trim().replace(/\s+/g, ' ') ?? null;
 }
 
