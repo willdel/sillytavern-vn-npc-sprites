@@ -21,3 +21,8 @@ export function chooseSprite(sprites, preferredLabel = 'neutral') {
 export function clearSpriteCache() {
   cache.clear();
 }
+
+export function getCardAvatarPath(character) {
+  const avatar = String(character?.avatar ?? '').trim();
+  return avatar && avatar !== 'none' ? `/characters/${encodeURIComponent(avatar)}` : null;
+}
