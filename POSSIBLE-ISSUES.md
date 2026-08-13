@@ -58,7 +58,9 @@ Investigate whether the outfit expression label is unavailable, mismatched, or s
 
 Automatic background selection may stop changing the background after previously working. Background information also disappears from the extension's test/status output, including both successful mappings and unmatched-location notices.
 
-Investigate whether Location-header processing is still running on new messages and test-button execution after the outfit-tracking update. Also verify that background settings survive extension updates and that status messages from sprite, expression, action, or outfit processing are not replacing the background result.
+**Additional observation:** Background selection works in at least one existing chat, but not in a brand-new chat that has no lorebook attached. This suggests the mapping itself and `/bg` execution can still work, while new-chat initialization or message processing may incorrectly depend on lorebook/character candidate data.
+
+Investigate whether Location-header processing is still running on new messages and test-button execution after the outfit-tracking update. Test new chats both with and without a lorebook. Verify that background processing runs independently of character candidates, lorebook availability, and a non-empty scene roster. Also verify that background settings survive extension updates and that status messages from sprite, expression, action, or outfit processing are not replacing the background result.
 
 Useful evidence for later diagnosis includes the complete Location header, configured background mapping, current background filename, and full **Test latest AI message** output.
 
