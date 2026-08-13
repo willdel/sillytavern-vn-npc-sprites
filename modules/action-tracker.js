@@ -34,7 +34,7 @@ export function detectActions(text, characters, definitions) {
     const namePattern = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(character.name)}(?![\\p{L}\\p{N}_])`, 'u');
     let last = null;
     segments.forEach((segment, segmentIndex) => {
-      if (!namePattern.test(segment)) return;
+      if (characters.length !== 1 && !namePattern.test(segment)) return;
       for (const definition of definitions) {
         for (const trigger of definition.triggers) {
           const match = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(trigger)}(?![\\p{L}\\p{N}_])`, 'iu').exec(segment);
