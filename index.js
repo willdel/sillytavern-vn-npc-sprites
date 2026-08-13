@@ -1,6 +1,6 @@
-import { buildCandidates, detectNpc } from './modules/detection.js';
+import { buildCandidates, detectNpcs } from './modules/detection.js';
 import { chooseSprite, clearSpriteCache, getSprites } from './modules/sprites.js';
-import { clearNpcSprites, removeRenderer, renderNpcSprite } from './modules/renderer.js';
+import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
@@ -48,25 +48,31 @@ async function routeText(text) {
 
   const library = characterLibrary.length ? characterLibrary : await refreshCharacterLibrary();
   const candidates = buildCandidates(library, config.aliases);
-  const match = detectNpc(text, candidates, { allowMentionFallback: config.allowMentionFallback });
-  if (!match) {
+  const detection = detectNpcs(text, candidates, { allowMentionFallback: config.allowMentionFallback, limit: 5 });
+  if (!detection.characters.length) {
     clearNpcSprites();
-    return setStatus('No unambiguous matching character card name found.');
+    return setStatus('No matching character card names found.');
   }
 
   try {
-    const sprites = await getSprites(match.name);
-    const sprite = chooseSprite(sprites, config.fallbackLabel);
-    if (!sprite?.path) {
-      clearNpcSprites();
-      return setStatus(`Matched ${match.name}, but its sprite folder is empty.`);
-    }
-    renderNpcSprite({ name: match.name, path: sprite.path, reason: match.reason });
-    setStatus(`Showing ${match.name} (${sprite.label}; ${match.reason}).`);
+    const resolved = await Promise.all(detection.characters.map(async match => {
+      const sprite = chooseSprite(await getSprites(match.name), config.fallbackLabel);
+      return sprite?.path ? {
+        name: match.name,
+        path: sprite.path,
+        label: sprite.label,
+        reason: match.reason,
+        active: detection.activeSpeaker?.name === match.name,
+      } : null;
+    }));
+    const visible = resolved.filter(Boolean);
+    renderNpcSprites(visible);
+    if (!visible.length) return setStatus('Matched characters, but none have usable sprites.');
+    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).`);
   } catch (error) {
     console.error(`[${MODULE_NAME}]`, error);
     clearNpcSprites();
-    setStatus(`Could not load sprites for ${match.name}.`);
+    setStatus('Could not load one or more character sprites.');
   }
 }
 
