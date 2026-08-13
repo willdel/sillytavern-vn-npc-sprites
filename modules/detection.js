@@ -32,7 +32,8 @@ export function buildCandidates(characters = [], aliasText = '') {
 }
 
 export function detectNpc(text, candidates, { allowMentionFallback = true } = {}) {
-  const source = String(text ?? '');
+  const fullText = String(text ?? '');
+  const source = fullText.split(/^.*INTERNAL STATES.*$/imu, 1)[0];
   for (const candidate of candidates) {
     const token = boundaryPattern(candidate.token);
     const speaker = new RegExp(`(?:^|\\n)\\s*(?:[*_>~-]+\\s*)?${token}\\s*(?::|—|–|-)`, 'iu');
