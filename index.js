@@ -1,14 +1,15 @@
 import { buildCandidates } from './modules/detection.js';
-import { chooseSprite, clearSpriteCache, getCardAvatarPath, getSprites } from './modules/sprites.js';
+import { chooseOutfitSprite, clearSpriteCache, getCardAvatarPath, getSprites } from './modules/sprites.js';
 import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 import { analyzeScene, updateScene } from './modules/scene-tracker.js';
 import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDefinitions, updateActionStates } from './modules/action-tracker.js';
 import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
 import { parseBackgroundMappings, resolveBackground } from './modules/background-tracker.js';
+import { DEFAULT_OUTFIT_DEFINITIONS, detectOutfits, parseOutfitDefinitions, updateOutfitStates } from './modules/outfit-tracker.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', scenes: {} });
 let context;
 let characterLibrary = [];
 
@@ -38,6 +39,9 @@ function settings() {
   config.expressionsEnabled ??= DEFAULTS.expressionsEnabled;
   config.actionsEnabled ??= DEFAULTS.actionsEnabled;
   config.actionDefinitions ??= DEFAULTS.actionDefinitions;
+  config.outfitsEnabled ??= DEFAULTS.outfitsEnabled;
+  config.defaultOutfit ??= DEFAULTS.defaultOutfit;
+  config.outfitDefinitions ??= DEFAULTS.outfitDefinitions;
   config.backgroundsEnabled ??= DEFAULTS.backgroundsEnabled;
   config.backgroundMappings ??= DEFAULTS.backgroundMappings;
   config.scenes ??= {};
@@ -49,9 +53,10 @@ function sceneKey() {
 }
 
 function getScene() {
-  const scene = settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {} };
+  const scene = settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {}, outfitStates: {} };
   scene.actionStates ??= {};
   scene.expressionStates ??= {};
+  scene.outfitStates ??= {};
   return scene;
 }
 
@@ -65,7 +70,8 @@ function updateRosterUi(scene = getScene()) {
   const text = scene.roster.length ? scene.roster.map(name => {
     const action = currentAction(scene.actionStates?.[name]);
     const expression = scene.expressionStates?.[name];
-    const state = action ?? expression;
+    const outfit = scene.outfitStates?.[name] ?? settings().defaultOutfit;
+    const state = [outfit, action ?? expression].filter(Boolean).join(', ');
     return state ? `${name} [${state}]` : name;
   }).join(', ') : 'No tracked characters.';
   $('#vn_npc_roster').text(`${text}${scene.location ? ` - ${scene.location}` : ''}`);
@@ -127,7 +133,8 @@ async function renderScene(scene, candidates) {
       const action = config.actionsEnabled ? currentAction(scene.actionStates?.[match.name]) : null;
       const expression = config.expressionsEnabled ? scene.expressionStates?.[match.name] : null;
       const preferred = action ?? expression ?? config.fallbackLabel;
-      const sprite = chooseSprite(await getSprites(match.name), preferred, action && expression ? [expression] : []);
+      const outfit = config.outfitsEnabled ? scene.outfitStates?.[match.name] ?? config.defaultOutfit : config.defaultOutfit;
+      const sprite = chooseOutfitSprite(await getSprites(match.name), { outfit, defaultOutfit: config.defaultOutfit, action, expression, fallback: config.fallbackLabel });
       const avatarPath = getCardAvatarPath(match.character);
       const path = sprite?.path ?? avatarPath;
       return path ? {
@@ -136,6 +143,7 @@ async function renderScene(scene, candidates) {
         label: sprite?.label ?? 'card avatar',
         action,
         expression,
+        outfit,
         reason: match.reason,
         active: scene.activeSpeaker === match.name,
         cardAvatar: !sprite,
@@ -172,6 +180,9 @@ async function routeText(sceneText, responseText = sceneText) {
   scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
   const expressionUpdates = await classifyExpressions(responseText, scene.roster, config);
   scene.expressionStates = updateExpressionStates(scene.locationChanged ? {} : previous.expressionStates, scene.roster, expressionUpdates);
+  const outfitDefinitions = parseOutfitDefinitions(config.outfitDefinitions);
+  const outfitUpdates = config.outfitsEnabled ? detectOutfits(responseText, scene.roster.map(name => ({ name })), outfitDefinitions) : [];
+  scene.outfitStates = updateOutfitStates(scene.locationChanged ? {} : previous.outfitStates, scene.roster, outfitUpdates, config.defaultOutfit);
   const backgroundUpdate = await updateBackground(analysis.location, scene);
   saveScene(scene);
   await renderScene(scene, candidates);
@@ -181,6 +192,7 @@ async function routeText(sceneText, responseText = sceneText) {
     scene.locationChanged ? 'cleared for location change' : '',
     actionUpdates.length ? `actions ${actionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
     expressionUpdates.length ? `expressions ${expressionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
+    outfitUpdates.length ? `outfits ${outfitUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
   ].filter(Boolean).join('; ');
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
   if (config.expressionsEnabled && !expressionUpdates.length) $('#vn_npc_status').append(' Expression classifier returned no label; using sprite fallback.');
@@ -246,6 +258,20 @@ function bindSettings() {
     config.actionDefinitions = this.value;
     context.saveSettingsDebounced();
   });
+  $('#vn_npc_outfits_enabled').prop('checked', config.outfitsEnabled).on('input', function () {
+    config.outfitsEnabled = this.checked;
+    context.saveSettingsDebounced();
+  });
+  $('#vn_npc_default_outfit').val(config.defaultOutfit).on('input', function () {
+    config.defaultOutfit = String(this.value || 'casual').trim().toLocaleLowerCase();
+    populateOutfitPicker();
+    context.saveSettingsDebounced();
+  });
+  $('#vn_npc_outfit_definitions').val(config.outfitDefinitions).on('input', function () {
+    config.outfitDefinitions = this.value;
+    populateOutfitPicker();
+    context.saveSettingsDebounced();
+  });
   $('#vn_npc_backgrounds_enabled').prop('checked', config.backgroundsEnabled).on('input', function () {
     config.backgroundsEnabled = this.checked;
     context.saveSettingsDebounced();
@@ -265,6 +291,8 @@ function bindSettings() {
     scene.actionStates[name] ??= { persistent: null, temporary: null };
     scene.expressionStates ??= {};
     scene.expressionStates[name] ??= null;
+    scene.outfitStates ??= {};
+    scene.outfitStates[name] ??= config.defaultOutfit;
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
@@ -274,6 +302,7 @@ function bindSettings() {
     scene.roster = scene.roster.filter(item => item !== name);
     delete scene.actionStates?.[name];
     delete scene.expressionStates?.[name];
+    delete scene.outfitStates?.[name];
     if (scene.activeSpeaker === name) scene.activeSpeaker = null;
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
@@ -286,12 +315,36 @@ function bindSettings() {
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
+  $('#vn_npc_set_outfit').on('click', async () => {
+    const name = String($('#vn_npc_character').val() ?? '');
+    const outfit = String($('#vn_npc_outfit').val() ?? config.defaultOutfit);
+    if (!name) return;
+    const scene = getScene();
+    scene.outfitStates[name] = outfit;
+    saveScene(scene);
+    await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
+  });
+  $('#vn_npc_reset_outfit').on('click', async () => {
+    const name = String($('#vn_npc_character').val() ?? '');
+    if (!name) return;
+    const scene = getScene();
+    scene.outfitStates[name] = config.defaultOutfit;
+    saveScene(scene);
+    await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
+  });
   $('#vn_npc_clear').on('click', () => {
-    saveScene({ roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {} });
+    saveScene({ roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {}, outfitStates: {} });
     clearNpcSprites();
     setStatus('Scene cleared.');
   });
   updateRosterUi();
+}
+
+function populateOutfitPicker() {
+  const config = settings();
+  const labels = [...new Set([config.defaultOutfit, ...parseOutfitDefinitions(config.outfitDefinitions).map(item => item.label)])];
+  const picker = $('#vn_npc_outfit').empty();
+  for (const label of labels) picker.append($('<option>').val(label).text(label));
 }
 
 async function initialize() {
@@ -300,6 +353,7 @@ async function initialize() {
   const html = await context.renderExtensionTemplateAsync(EXTENSION_FOLDER, 'settings');
   $('#extensions_settings2').append(html);
   bindSettings();
+  populateOutfitPicker();
   context.eventSource.on(context.eventTypes.CHARACTER_MESSAGE_RENDERED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.MESSAGE_SWIPED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.MESSAGE_EDITED, onCharacterMessage);
