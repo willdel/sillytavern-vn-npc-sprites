@@ -4,7 +4,7 @@ This catalogue records behavior to investigate or improve later. Items listed he
 
 ## 1. Allow shorter location mappings
 
-**Status:** Open enhancement idea
+**Status:** Implemented in v0.6.1
 
 Background mappings currently require the complete normalized Location header to match. This can make mappings overly specific. For example:
 
@@ -18,7 +18,7 @@ Investigate allowing a shorter mapping such as:
 Bedroom = bedroom.webp
 ```
 
-The shorter mapping would select `bedroom.webp` when `Bedroom` is a distinct portion of the structured Location header. Any future implementation should avoid accidental matches, support precedence for more-specific mappings, and handle locations containing the same room name in different buildings.
+The shorter mapping now selects `bedroom.webp` when `Bedroom` appears in the structured Location header. Multiple required terms can distinguish ambiguous rooms, for example `Sunset Shores Apartments + Pool = apartment_pool.webp`. Exact and more-specific mappings take priority.
 
 ## 2. Scene roster can be lost when characters are unnamed
 
