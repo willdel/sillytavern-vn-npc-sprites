@@ -16,6 +16,10 @@
       </div>
       <label for="vn_npc_fallback">Preferred fallback sprite label</label>
       <input id="vn_npc_fallback" class="text_pole" type="text" placeholder="neutral">
+      <label class="checkbox_label" for="vn_npc_expressions_enabled">
+        <input id="vn_npc_expressions_enabled" type="checkbox">
+        <span>Use the Character Expressions classifier</span>
+      </label>
       <label for="vn_npc_aliases">Aliases (one per line: Alias = Card Name)</label>
       <textarea id="vn_npc_aliases" class="text_pole" rows="4" placeholder="Ms. Carter = Shannon"></textarea>
       <label class="checkbox_label" for="vn_npc_actions_enabled">
@@ -32,6 +36,7 @@
         <button id="vn_npc_clear" class="menu_button" type="button">Clear scene</button>
       </div>
       <small id="vn_npc_status">Waiting for an AI message.</small>
+      <small>Expression classification uses the API selected in SillyTavern's Character Expressions settings.</small>
     </div>
   </div>
 </div>
