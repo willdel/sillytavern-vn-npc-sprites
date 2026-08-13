@@ -1,54 +1,63 @@
 # VN NPC Sprites for SillyTavern
 
-An experimental third-party UI extension that routes an NPC named inside a narrator/GM response to that NPC's existing Character Expressions sprite folder, then displays the sprite in Visual Novel mode without adding the NPC card to the chat.
+A third-party UI extension that displays lorebook-driven NPCs in Visual Novel mode using matching character-card sprite folders, without loading those cards into the chat.
 
-## v0.1 scope
+## Features
 
-- Matches against character card names already present in the SillyTavern character library.
-- Prefers explicit speaker lines such as `Shannon: Hello` or `Shannon â€” Hello`.
-- Optionally falls back when exactly one card name is mentioned anywhere in the message.
-- Supports deterministic aliases such as `Ms. Carter = Shannon`.
-- Loads sprites through SillyTavern's existing `/api/sprites/get` endpoint.
-- Prefers `neutral` (configurable), then `neutral`, then `default`, then the first available sprite.
-- Shows one NPC in desktop Visual Novel mode and removes it when the next message has no unambiguous match.
-
-This release does not classify emotions, infer scene entrances/exits, read lorebook prose semantically, or show multiple sprites. Those are intentionally deferred.
+- Persistent, per-chat scene roster with up to five characters.
+- Deterministic entrance, exit, location, and explicit-speaker tracking.
+- Active-speaker focus and multi-character layout.
+- Expression/action sprites with character-card avatar fallback.
+- Editable aliases and action definitions.
+- Manual scene and action correction controls.
+- No SillyTavern core modifications or external service dependency.
 
 ## Install
 
-SillyTavern installs third-party extensions from Git repository URLs. Put this folder in its own Git repository and use **Extensions â†’ Install Extension**, or copy the unzipped folder to:
+In SillyTavern, open **Extensions -> Install Extension** and paste:
 
-- all users: `SillyTavern/public/scripts/extensions/third-party/sillytavern-vn-npc-sprites`
-- one user: the user's `extensions/sillytavern-vn-npc-sprites` data directory
+```text
+https://github.com/willdel/sillytavern-vn-npc-sprites
+```
 
-Restart/reload SillyTavern. Enable **Visual Novel Mode** in User Settings, open **Extensions â†’ VN NPC Sprites**, and click **Test latest AI message**.
+Reload SillyTavern, enable Visual Novel mode, and configure **Extensions -> VN NPC Sprites**.
 
-Character Expressions must already have sprites for the matching card name. Example: a card named `Shannon` should resolve from the same sprite folder used by Character Expressions.
+Character Expressions must already contain sprites for the matching card name. Transparent sprite images work best at a **2:3 aspect ratio**. Other ratios are supported but may leave more empty space or appear smaller in multi-character scenes.
 
 ## Scene tracking
 
-The extension keeps a separate persistent roster for each chat. Explicit speakers and physical-presence cues add characters; exit cues remove them. A location change clears the old roster before adding characters detected at the new location. Ordinary conversational references do not add sprites.
+The extension keeps a separate persistent roster for each chat. Explicit speakers and physical-presence cues add characters; exit cues remove them. A location change clears the old roster before adding characters at the new location. Ordinary conversational references do not add sprites.
 
-Use the Current Scene controls to add, remove, or clear characters when prose is ambiguous. Up to five tracked characters are rendered.
+Use **Add to scene**, **Remove from scene**, or **Clear scene** when prose is ambiguous.
 
-Lorebook/world-info entries can cause the model to emit NPC names, but v0.1 does not parse world-info records directly. A lorebook name must match a card name, or be mapped in Aliases.
+## Action sprites
 
-## Architecture roadmap
+Action definitions are editable in extension settings:
 
-- `detection.js`: replaceable deterministic speaker/name resolver.
-- `sprites.js`: sprite inventory and state-selection boundary; action labels such as `walking`, `eating`, and `sleeping` can use the same endpoint.
-- `scene-tracker.js`: deterministic entrances, exits, locations, and persistent roster transitions.
-- `renderer.js`: isolated five-character scene layer with active-speaker focus.
-- `index.js`: SillyTavern events, settings, and orchestration.
+```text
+walking | temporary = walk, walks, walked, walking
+sitting | persistent = sit down, sits down, sat down, seated
+kissing | temporary = kiss, kisses, kissed, kissing
+```
 
-Planned next stages: expanded tracking rules, generalized action-state classification, and outfit-aware sprite folders.
+The action name on the left must match the sprite label/filename. Add custom actions by adding another line; no extension update is required.
+
+- `temporary`: lasts for the current analyzed turn, then returns to the prior persistent action or neutral.
+- `persistent`: remains until replaced by another persistent action or manually reset.
+
+Sprite resolution order is detected action, configured neutral/default expression, first available sprite, then character-card avatar. Use **Reset action** for manual correction.
+
+## Architecture
+
+- `detection.js`: character names and aliases.
+- `scene-tracker.js`: entrances, exits, locations, and roster transitions.
+- `action-tracker.js`: configurable action parsing and state transitions.
+- `sprites.js`: sprite inventory and fallback selection.
+- `renderer.js`: five-character scene layout and active-speaker focus.
+- `index.js`: SillyTavern events, settings, persistence, and orchestration.
 
 ## Development
 
-Run `npm test` with Node.js 20 or newer. Tests cover explicit speakers, word boundaries, ambiguity, mention fallback, and aliases.
+Run `npm test` with Node.js 20 or newer.
 
-## Compatibility and safety
-
-Built against the current SillyTavern `release` branch extension API in August 2026. No SillyTavern core files are modified. The extension makes only same-origin sprite-list requests and has no external network dependency.
-
-License: AGPL-3.0-or-later.
+Built against SillyTavern's `release` branch in August 2026. License: GPL-3.0.
