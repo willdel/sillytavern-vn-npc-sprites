@@ -4,10 +4,11 @@ import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/ren
 import { analyzeScene, updateScene } from './modules/scene-tracker.js';
 import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDefinitions, updateActionStates } from './modules/action-tracker.js';
 import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
+import { parseBackgroundMappings, resolveBackground } from './modules/background-tracker.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', scenes: {} });
 let context;
 let characterLibrary = [];
 
@@ -37,6 +38,8 @@ function settings() {
   config.expressionsEnabled ??= DEFAULTS.expressionsEnabled;
   config.actionsEnabled ??= DEFAULTS.actionsEnabled;
   config.actionDefinitions ??= DEFAULTS.actionDefinitions;
+  config.backgroundsEnabled ??= DEFAULTS.backgroundsEnabled;
+  config.backgroundMappings ??= DEFAULTS.backgroundMappings;
   config.scenes ??= {};
   return config;
 }
@@ -77,6 +80,27 @@ function populateCharacterPicker() {
 
 function setStatus(message) {
   $('#vn_npc_status').text(message);
+}
+
+async function updateBackground(location, scene) {
+  const config = settings();
+  if (!config.backgroundsEnabled || !location) return { status: 'disabled-or-missing' };
+  const mapping = resolveBackground(location, parseBackgroundMappings(config.backgroundMappings));
+  if (!mapping) return { status: 'unmatched', location };
+  if (scene.backgroundFile === mapping.file) return { status: 'unchanged', location, file: mapping.file };
+  try {
+    const result = await context.executeSlashCommandsWithOptions(`/bg ${JSON.stringify(mapping.file)}`, {
+      handleParserErrors: false,
+      handleExecutionErrors: false,
+    });
+    if (result?.isError) throw new Error(result.errorMessage || 'The /bg command failed.');
+    scene.backgroundFile = mapping.file;
+    scene.backgroundLocation = location;
+    return { status: 'changed', location, file: mapping.file };
+  } catch (error) {
+    console.error(`[${MODULE_NAME}] Could not change background.`, error);
+    return { status: 'error', location, file: mapping.file };
+  }
 }
 
 function isVnMode() {
@@ -141,11 +165,14 @@ async function routeText(sceneText, responseText = sceneText) {
   const analysis = analyzeScene(sceneText, candidates);
   const previous = getScene();
   const scene = updateScene(previous, analysis, { limit: 5 });
+  scene.backgroundFile = previous.backgroundFile ?? null;
+  scene.backgroundLocation = previous.backgroundLocation ?? null;
   const definitions = parseActionDefinitions(config.actionDefinitions);
   const actionUpdates = config.actionsEnabled ? detectActions(responseText, scene.roster.map(name => ({ name })), definitions) : [];
   scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
   const expressionUpdates = await classifyExpressions(responseText, scene.roster, config);
   scene.expressionStates = updateExpressionStates(scene.locationChanged ? {} : previous.expressionStates, scene.roster, expressionUpdates);
+  const backgroundUpdate = await updateBackground(analysis.location, scene);
   saveScene(scene);
   await renderScene(scene, candidates);
   const changes = [
@@ -157,6 +184,9 @@ async function routeText(sceneText, responseText = sceneText) {
   ].filter(Boolean).join('; ');
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
   if (config.expressionsEnabled && !expressionUpdates.length) $('#vn_npc_status').append(' Expression classifier returned no label; using sprite fallback.');
+  if (backgroundUpdate.status === 'changed') $('#vn_npc_status').append(` Background: ${backgroundUpdate.file}.`);
+  if (backgroundUpdate.status === 'unmatched') $('#vn_npc_status').append(` No background mapping for: ${backgroundUpdate.location}.`);
+  if (backgroundUpdate.status === 'error') $('#vn_npc_status').append(` Could not select background: ${backgroundUpdate.file}.`);
 }
 
 async function classifyExpressions(text, roster, config) {
@@ -214,6 +244,14 @@ function bindSettings() {
   });
   $('#vn_npc_action_definitions').val(config.actionDefinitions).on('input', function () {
     config.actionDefinitions = this.value;
+    context.saveSettingsDebounced();
+  });
+  $('#vn_npc_backgrounds_enabled').prop('checked', config.backgroundsEnabled).on('input', function () {
+    config.backgroundsEnabled = this.checked;
+    context.saveSettingsDebounced();
+  });
+  $('#vn_npc_background_mappings').val(config.backgroundMappings).on('input', function () {
+    config.backgroundMappings = this.value;
     context.saveSettingsDebounced();
   });
   $('#vn_npc_test').on('click', () => routeText(latestSceneText(), latestAiText()));
@@ -289,3 +327,4 @@ export function onDelete() {
 }
 
 jQuery(initialize);
+
