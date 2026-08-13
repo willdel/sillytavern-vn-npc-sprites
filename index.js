@@ -3,10 +3,11 @@ import { chooseSprite, clearSpriteCache, getCardAvatarPath, getSprites } from '.
 import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 import { analyzeScene, updateScene } from './modules/scene-tracker.js';
 import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDefinitions, updateActionStates } from './modules/action-tracker.js';
+import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, scenes: {} });
 let context;
 let characterLibrary = [];
 
@@ -29,8 +30,15 @@ async function refreshCharacterLibrary() {
 
 function settings() {
   context.extensionSettings[MODULE_NAME] ??= structuredClone(DEFAULTS);
-  context.extensionSettings[MODULE_NAME].scenes ??= {};
-  return context.extensionSettings[MODULE_NAME];
+  const config = context.extensionSettings[MODULE_NAME];
+  config.enabled ??= DEFAULTS.enabled;
+  config.fallbackLabel ??= DEFAULTS.fallbackLabel;
+  config.aliases ??= DEFAULTS.aliases;
+  config.expressionsEnabled ??= DEFAULTS.expressionsEnabled;
+  config.actionsEnabled ??= DEFAULTS.actionsEnabled;
+  config.actionDefinitions ??= DEFAULTS.actionDefinitions;
+  config.scenes ??= {};
+  return config;
 }
 
 function sceneKey() {
@@ -38,8 +46,9 @@ function sceneKey() {
 }
 
 function getScene() {
-  const scene = settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null, actionStates: {} };
+  const scene = settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {} };
   scene.actionStates ??= {};
+  scene.expressionStates ??= {};
   return scene;
 }
 
@@ -52,7 +61,9 @@ function saveScene(scene) {
 function updateRosterUi(scene = getScene()) {
   const text = scene.roster.length ? scene.roster.map(name => {
     const action = currentAction(scene.actionStates?.[name]);
-    return action ? `${name} [${action}]` : name;
+    const expression = scene.expressionStates?.[name];
+    const state = action ?? expression;
+    return state ? `${name} [${state}]` : name;
   }).join(', ') : 'No tracked characters.';
   $('#vn_npc_roster').text(`${text}${scene.location ? ` - ${scene.location}` : ''}`);
 }
@@ -90,8 +101,9 @@ async function renderScene(scene, candidates) {
   try {
     const resolved = await Promise.all(tracked.map(async match => {
       const action = config.actionsEnabled ? currentAction(scene.actionStates?.[match.name]) : null;
-      const preferred = action ?? config.fallbackLabel;
-      const sprite = chooseSprite(await getSprites(match.name), preferred);
+      const expression = config.expressionsEnabled ? scene.expressionStates?.[match.name] : null;
+      const preferred = action ?? expression ?? config.fallbackLabel;
+      const sprite = chooseSprite(await getSprites(match.name), preferred, action && expression ? [expression] : []);
       const avatarPath = getCardAvatarPath(match.character);
       const path = sprite?.path ?? avatarPath;
       return path ? {
@@ -99,6 +111,7 @@ async function renderScene(scene, candidates) {
         path,
         label: sprite?.label ?? 'card avatar',
         action,
+        expression,
         reason: match.reason,
         active: scene.activeSpeaker === match.name,
         cardAvatar: !sprite,
@@ -111,7 +124,9 @@ async function renderScene(scene, candidates) {
     const fallbackNote = fallbacks.length ? ` Card avatar fallback: ${fallbacks.join(', ')}.` : '';
     const actions = visible.filter(item => item.action).map(item => `${item.name}: ${item.action}`);
     const actionNote = actions.length ? ` Actions: ${actions.join(', ')}.` : '';
-    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${actionNote}${fallbackNote}`);
+    const expressions = visible.filter(item => !item.action && item.expression).map(item => `${item.name}: ${item.expression}`);
+    const expressionNote = expressions.length ? ` Expressions: ${expressions.join(', ')}.` : '';
+    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${actionNote}${expressionNote}${fallbackNote}`);
   } catch (error) {
     console.error(`[${MODULE_NAME}]`, error);
     clearNpcSprites();
@@ -129,6 +144,8 @@ async function routeText(text) {
   const definitions = parseActionDefinitions(config.actionDefinitions);
   const actionUpdates = config.actionsEnabled ? detectActions(text, scene.roster.map(name => ({ name })), definitions) : [];
   scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
+  const expressionUpdates = await classifyExpressions(text, scene.roster, config);
+  scene.expressionStates = updateExpressionStates(scene.locationChanged ? {} : previous.expressionStates, scene.roster, expressionUpdates);
   saveScene(scene);
   await renderScene(scene, candidates);
   const changes = [
@@ -136,8 +153,22 @@ async function routeText(text) {
     analysis.exits.length ? `removed ${analysis.exits.map(item => item.name).join(', ')}` : '',
     scene.locationChanged ? 'cleared for location change' : '',
     actionUpdates.length ? `actions ${actionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
+    expressionUpdates.length ? `expressions ${expressionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
   ].filter(Boolean).join('; ');
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
+}
+
+async function classifyExpressions(text, roster, config) {
+  if (!config.expressionsEnabled || !roster.length) return [];
+  try {
+    const { getExpressionLabel } = await import('../../expressions/index.js');
+    const samples = expressionSamples(text, roster);
+    if (roster.length === 1 && !samples.has(roster[0])) samples.set(roster[0], String(text).split(/^.*INTERNAL STATES.*$/imu, 1)[0]);
+    return (await Promise.all([...samples].map(async ([name, sample]) => ({ name, label: await getExpressionLabel(sample, undefined, { filterAvailable: false }) })))).filter(item => item.label);
+  } catch (error) {
+    console.warn(`[${MODULE_NAME}] Character Expressions classification unavailable.`, error);
+    return [];
+  }
 }
 
 function latestAiText(messageId) {
@@ -167,6 +198,10 @@ function bindSettings() {
     config.fallbackLabel = this.value || 'neutral';
     context.saveSettingsDebounced();
   });
+  $('#vn_npc_expressions_enabled').prop('checked', config.expressionsEnabled).on('input', function () {
+    config.expressionsEnabled = this.checked;
+    context.saveSettingsDebounced();
+  });
   $('#vn_npc_aliases').val(config.aliases).on('input', function () {
     config.aliases = this.value;
     context.saveSettingsDebounced();
@@ -188,6 +223,8 @@ function bindSettings() {
     scene.activeSpeaker = name;
     scene.actionStates ??= {};
     scene.actionStates[name] ??= { persistent: null, temporary: null };
+    scene.expressionStates ??= {};
+    scene.expressionStates[name] ??= null;
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
@@ -196,6 +233,7 @@ function bindSettings() {
     const scene = getScene();
     scene.roster = scene.roster.filter(item => item !== name);
     delete scene.actionStates?.[name];
+    delete scene.expressionStates?.[name];
     if (scene.activeSpeaker === name) scene.activeSpeaker = null;
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
@@ -209,7 +247,7 @@ function bindSettings() {
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
   $('#vn_npc_clear').on('click', () => {
-    saveScene({ roster: [], location: null, activeSpeaker: null, actionStates: {} });
+    saveScene({ roster: [], location: null, activeSpeaker: null, actionStates: {}, expressionStates: {} });
     clearNpcSprites();
     setStatus('Scene cleared.');
   });
