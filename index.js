@@ -2,10 +2,11 @@ import { buildCandidates } from './modules/detection.js';
 import { chooseSprite, clearSpriteCache, getCardAvatarPath, getSprites } from './modules/sprites.js';
 import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 import { analyzeScene, updateScene } from './modules/scene-tracker.js';
+import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDefinitions, updateActionStates } from './modules/action-tracker.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, scenes: {} });
 let context;
 let characterLibrary = [];
 
@@ -37,7 +38,9 @@ function sceneKey() {
 }
 
 function getScene() {
-  return settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null };
+  const scene = settings().scenes[sceneKey()] ??= { roster: [], location: null, activeSpeaker: null, actionStates: {} };
+  scene.actionStates ??= {};
+  return scene;
 }
 
 function saveScene(scene) {
@@ -47,7 +50,10 @@ function saveScene(scene) {
 }
 
 function updateRosterUi(scene = getScene()) {
-  const text = scene.roster.length ? scene.roster.join(', ') : 'No tracked characters.';
+  const text = scene.roster.length ? scene.roster.map(name => {
+    const action = currentAction(scene.actionStates?.[name]);
+    return action ? `${name} [${action}]` : name;
+  }).join(', ') : 'No tracked characters.';
   $('#vn_npc_roster').text(`${text}${scene.location ? ` - ${scene.location}` : ''}`);
 }
 
@@ -83,13 +89,16 @@ async function renderScene(scene, candidates) {
 
   try {
     const resolved = await Promise.all(tracked.map(async match => {
-      const sprite = chooseSprite(await getSprites(match.name), config.fallbackLabel);
+      const action = config.actionsEnabled ? currentAction(scene.actionStates?.[match.name]) : null;
+      const preferred = action ?? config.fallbackLabel;
+      const sprite = chooseSprite(await getSprites(match.name), preferred);
       const avatarPath = getCardAvatarPath(match.character);
       const path = sprite?.path ?? avatarPath;
       return path ? {
         name: match.name,
         path,
         label: sprite?.label ?? 'card avatar',
+        action,
         reason: match.reason,
         active: scene.activeSpeaker === match.name,
         cardAvatar: !sprite,
@@ -100,7 +109,9 @@ async function renderScene(scene, candidates) {
     if (!visible.length) return setStatus('Matched characters, but none have usable sprites.');
     const fallbacks = visible.filter(item => item.cardAvatar).map(item => item.name);
     const fallbackNote = fallbacks.length ? ` Card avatar fallback: ${fallbacks.join(', ')}.` : '';
-    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${fallbackNote}`);
+    const actions = visible.filter(item => item.action).map(item => `${item.name}: ${item.action}`);
+    const actionNote = actions.length ? ` Actions: ${actions.join(', ')}.` : '';
+    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${actionNote}${fallbackNote}`);
   } catch (error) {
     console.error(`[${MODULE_NAME}]`, error);
     clearNpcSprites();
@@ -113,13 +124,18 @@ async function routeText(text) {
   const library = characterLibrary.length ? characterLibrary : await refreshCharacterLibrary();
   const candidates = buildCandidates(library, config.aliases);
   const analysis = analyzeScene(text, candidates);
-  const scene = updateScene(getScene(), analysis, { limit: 5 });
+  const previous = getScene();
+  const scene = updateScene(previous, analysis, { limit: 5 });
+  const definitions = parseActionDefinitions(config.actionDefinitions);
+  const actionUpdates = config.actionsEnabled ? detectActions(text, scene.roster.map(name => ({ name })), definitions) : [];
+  scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
   saveScene(scene);
   await renderScene(scene, candidates);
   const changes = [
     analysis.entrances.length ? `added ${analysis.entrances.map(item => item.name).join(', ')}` : '',
     analysis.exits.length ? `removed ${analysis.exits.map(item => item.name).join(', ')}` : '',
     scene.locationChanged ? 'cleared for location change' : '',
+    actionUpdates.length ? `actions ${actionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
   ].filter(Boolean).join('; ');
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
 }
@@ -155,6 +171,14 @@ function bindSettings() {
     config.aliases = this.value;
     context.saveSettingsDebounced();
   });
+  $('#vn_npc_actions_enabled').prop('checked', config.actionsEnabled).on('input', function () {
+    config.actionsEnabled = this.checked;
+    context.saveSettingsDebounced();
+  });
+  $('#vn_npc_action_definitions').val(config.actionDefinitions).on('input', function () {
+    config.actionDefinitions = this.value;
+    context.saveSettingsDebounced();
+  });
   $('#vn_npc_test').on('click', () => routeText(latestSceneText()));
   $('#vn_npc_add').on('click', async () => {
     const name = String($('#vn_npc_character').val() ?? '');
@@ -162,6 +186,8 @@ function bindSettings() {
     const scene = getScene();
     scene.roster = [...scene.roster.filter(item => item !== name), name].slice(-5);
     scene.activeSpeaker = name;
+    scene.actionStates ??= {};
+    scene.actionStates[name] ??= { persistent: null, temporary: null };
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
@@ -169,12 +195,21 @@ function bindSettings() {
     const name = String($('#vn_npc_character').val() ?? '');
     const scene = getScene();
     scene.roster = scene.roster.filter(item => item !== name);
+    delete scene.actionStates?.[name];
     if (scene.activeSpeaker === name) scene.activeSpeaker = null;
     saveScene(scene);
     await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
   });
+  $('#vn_npc_reset_action').on('click', async () => {
+    const name = String($('#vn_npc_character').val() ?? '');
+    const scene = getScene();
+    scene.actionStates ??= {};
+    scene.actionStates[name] = { persistent: null, temporary: null };
+    saveScene(scene);
+    await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
+  });
   $('#vn_npc_clear').on('click', () => {
-    saveScene({ roster: [], location: null, activeSpeaker: null });
+    saveScene({ roster: [], location: null, activeSpeaker: null, actionStates: {} });
     clearNpcSprites();
     setStatus('Scene cleared.');
   });
