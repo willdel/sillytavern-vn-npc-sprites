@@ -28,6 +28,16 @@
       </label>
       <label for="vn_npc_action_definitions">Actions (action | temporary/persistent | priority = trigger phrases)</label>
       <textarea id="vn_npc_action_definitions" class="text_pole" rows="9"></textarea>
+      <label class="checkbox_label" for="vn_npc_outfits_enabled">
+        <input id="vn_npc_outfits_enabled" type="checkbox">
+        <span>Enable persistent outfit tracking</span>
+      </label>
+      <label for="vn_npc_default_outfit">Default outfit (uses unprefixed sprites)</label>
+      <input id="vn_npc_default_outfit" class="text_pole" type="text" placeholder="casual">
+      <label for="vn_npc_outfit_definitions">Outfits (outfit | priority = trigger phrases)</label>
+      <textarea id="vn_npc_outfit_definitions" class="text_pole" rows="8"></textarea>
+      <label for="vn_npc_outfit">Manual outfit correction</label>
+      <select id="vn_npc_outfit" class="text_pole"></select>
       <label class="checkbox_label" for="vn_npc_backgrounds_enabled">
         <input id="vn_npc_backgrounds_enabled" type="checkbox">
         <span>Automatically select backgrounds from the Location header</span>
@@ -40,6 +50,8 @@
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>
         <button id="vn_npc_remove" class="menu_button" type="button">Remove from scene</button>
         <button id="vn_npc_reset_action" class="menu_button" type="button">Reset action</button>
+        <button id="vn_npc_set_outfit" class="menu_button" type="button">Set outfit</button>
+        <button id="vn_npc_reset_outfit" class="menu_button" type="button">Reset outfit</button>
         <button id="vn_npc_clear" class="menu_button" type="button">Clear scene</button>
       </div>
       <small id="vn_npc_status">Waiting for an AI message.</small>
