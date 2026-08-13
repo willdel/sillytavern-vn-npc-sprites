@@ -1,4 +1,4 @@
-const ENTER_VERBS = String.raw`(?:arriv(?:e|es|ed|ing)|enter(?:s|ed|ing)?|approach(?:es|ed|ing)?|appear(?:s|ed|ing)?|come(?:s)?\s+(?:in|inside|over)|walk(?:s|ed|ing)?|step(?:s|ped|ping)?|stand(?:s|ing)?|sit(?:s|ting)?|wait(?:s|ed|ing)?|lean(?:s|ed|ing)?|turn(?:s|ed|ing)?|look(?:s|ed|ing)?|say(?:s|ing)?|ask(?:s|ed|ing)?|repl(?:y|ies|ied|ying)|smile(?:s|d|ing)?|wave(?:s|d|ing)?|tap(?:s|ped|ping)?|lift(?:s|ed|ing)?|hold(?:s|ing)?|shift(?:s|ed|ing)?|stop(?:s|ped|ping)?|pivot(?:s|ed|ing)?|fold(?:s|ed|ing)?|glance(?:s|d|ing)?|point(?:s|ed|ing)?|watch(?:es|ed|ing)?|roll(?:s|ed|ing)?|ease(?:s|d|ing)?|gesture(?:s|d|ing)?|nod(?:s|ded|ding)?|shrug(?:s|ged|ging)?)`;
+const ENTER_VERBS = String.raw`(?:arriv(?:e|es|ed|ing)|enter(?:s|ed|ing)?|approach(?:es|ed|ing)?|appear(?:s|ed|ing)?|come(?:s)?\s+(?:in|inside|over)|walk(?:s|ed|ing)?|step(?:s|ped|ping)?|stand(?:s|ing)?|sit(?:s|ting)?|wait(?:s|ed|ing)?|lean(?:s|ed|ing)?|turn(?:s|ed|ing)?|look(?:s|ed|ing)?|say(?:s|ing)?|ask(?:s|ed|ing)?|repl(?:y|ies|ied|ying)|smile(?:s|d|ing)?|wave(?:s|d|ing)?|tap(?:s|ped|ping)?|lift(?:s|ed|ing)?|hold(?:s|ing)?|shift(?:s|ed|ing)?|stop(?:s|ped|ping)?|pivot(?:s|ed|ing)?|fold(?:s|ed|ing)?|glance(?:s|d|ing)?|point(?:s|ed|ing)?|watch(?:es|ed|ing)?|roll(?:s|ed|ing)?|ease(?:s|d|ing)?|gesture(?:s|d|ing)?|nod(?:s|ded|ding)?|shrug(?:s|ged|ging)?|tilt(?:s|ed|ing)?|rip(?:s|ped|ping)?|push(?:es|ed|ing)?)`;
 const EXIT_VERBS = String.raw`(?:leav(?:e|es|ing)|left|exit(?:s|ed|ing)?|depart(?:s|ed|ing)?|walk(?:s|ed|ing)?\s+away|step(?:s|ped|ping)?\s+(?:out|away|back\s+inside)|head(?:s|ed|ing)?\s+(?:away|out|home|inside)|drive(?:s|d|ing)?\s+(?:away|off)|disappear(?:s|ed|ing)?|vanish(?:es|ed|ing)?|close(?:s|d|ing)?\s+(?:the|her|his|their)\s+door)`;
 
 function escapeRegExp(value) {
@@ -34,15 +34,15 @@ export function analyzeScene(text, candidates) {
     const boundary = `(?<![\\p{L}\\p{N}_])${name}(?![\\p{L}\\p{N}_])`;
     const speakerIndex = firstMatchIndex(source, [new RegExp(`(?:^|\\n)\\s*(?:[*_>~-]+\\s*)?${boundary}\\s*(?::|\\u2014|\\u2013|-)`, 'iu')]);
     const exitIndex = firstMatchIndex(source, [
-      new RegExp(`${boundary}[^.!?\\n]{0,45}\\b${EXIT_VERBS}\\b`, 'iu'),
-      new RegExp(`\\b${EXIT_VERBS}\\b[^.!?\\n]{0,45}${boundary}`, 'iu'),
-      new RegExp(`(?:say|says|said|wave|waves|waved)\\s+goodbye\\s+to\\s+${boundary}`, 'iu'),
+      new RegExp(`${boundary}[^.!?\\n]{0,45}\\b${EXIT_VERBS}\\b`, 'u'),
+      new RegExp(`\\b${EXIT_VERBS}\\b[^.!?\\n]{0,45}${boundary}`, 'u'),
+      new RegExp(`(?:say|says|said|wave|waves|waved)\\s+goodbye\\s+to\\s+${boundary}`, 'u'),
     ]);
     const entranceIndex = firstMatchIndex(source, [
-      new RegExp(`${boundary}[^.!?\\n]{0,45}\\b${ENTER_VERBS}\\b`, 'iu'),
-      new RegExp(`\\b${ENTER_VERBS}\\b[^.!?\\n]{0,45}${boundary}`, 'iu'),
-      new RegExp(`(?:I(?:'m| am)|my name is)\\s+${boundary}`, 'iu'),
-      new RegExp(`(?:I(?:'m| am)|my name(?:'s| is)|call(?:ing)? me)[^.!?\\n]{0,70}(?:[.!?]\\s*)?${boundary}`, 'iu'),
+      new RegExp(`${boundary}[^.!?\\n]{0,45}\\b${ENTER_VERBS}\\b`, 'u'),
+      new RegExp(`\\b${ENTER_VERBS}\\b[^.!?\\n]{0,45}${boundary}`, 'u'),
+      new RegExp(`(?:I(?:'m| am)|my name is)\\s+${boundary}`, 'u'),
+      new RegExp(`(?:I(?:'m| am)|my name(?:'s| is)|call(?:ing)? me)[^.!?\\n]{0,70}(?:[.!?]\\s*)?${boundary}`, 'u'),
     ]);
 
     if (speakerIndex >= 0) speakers.push({ ...candidate, reason: 'explicit-speaker', index: speakerIndex });
