@@ -1,5 +1,5 @@
 import { buildCandidates, detectNpcs } from './modules/detection.js';
-import { chooseSprite, clearSpriteCache, getSprites } from './modules/sprites.js';
+import { chooseSprite, clearSpriteCache, getCardAvatarPath, getSprites } from './modules/sprites.js';
 import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
@@ -57,18 +57,23 @@ async function routeText(text) {
   try {
     const resolved = await Promise.all(detection.characters.map(async match => {
       const sprite = chooseSprite(await getSprites(match.name), config.fallbackLabel);
-      return sprite?.path ? {
+      const avatarPath = getCardAvatarPath(match.character);
+      const path = sprite?.path ?? avatarPath;
+      return path ? {
         name: match.name,
-        path: sprite.path,
-        label: sprite.label,
+        path,
+        label: sprite?.label ?? 'card avatar',
         reason: match.reason,
         active: detection.activeSpeaker?.name === match.name,
+        cardAvatar: !sprite,
       } : null;
     }));
     const visible = resolved.filter(Boolean);
     renderNpcSprites(visible);
     if (!visible.length) return setStatus('Matched characters, but none have usable sprites.');
-    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).`);
+    const fallbacks = visible.filter(item => item.cardAvatar).map(item => item.name);
+    const fallbackNote = fallbacks.length ? ` Card avatar fallback: ${fallbacks.join(', ')}.` : '';
+    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${fallbackNote}`);
   } catch (error) {
     console.error(`[${MODULE_NAME}]`, error);
     clearNpcSprites();
