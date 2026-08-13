@@ -11,23 +11,32 @@ function getRoot() {
   return root;
 }
 
-export function renderNpcSprite({ name, path, reason }) {
+function centerActiveSprite(items) {
+  const activeIndex = items.findIndex(item => item.active);
+  if (activeIndex < 0 || items.length < 2) return items;
+  const arranged = [...items];
+  const [active] = arranged.splice(activeIndex, 1);
+  arranged.splice(Math.ceil(arranged.length / 2), 0, active);
+  return arranged;
+}
+
+export function renderNpcSprites(items) {
   const root = getRoot();
-  let figure = root.querySelector('.vn-npc-sprite');
-  if (!figure) {
-    figure = document.createElement('figure');
-    figure.className = 'vn-npc-sprite is-active';
+  root.replaceChildren();
+  for (const item of centerActiveSprite(items.slice(0, 5))) {
+    const figure = document.createElement('figure');
+    figure.className = `vn-npc-sprite${item.active ? ' is-active' : ''}`;
+    figure.dataset.character = item.name;
+    figure.dataset.detection = item.reason;
     const image = document.createElement('img');
     image.alt = '';
-    image.addEventListener('error', () => clearNpcSprites());
+    image.src = item.path;
+    image.addEventListener('error', () => figure.remove());
     figure.append(image);
     root.append(figure);
   }
-  figure.dataset.character = name;
-  figure.dataset.detection = reason;
-  figure.querySelector('img').src = path;
-  root.classList.add('has-sprites');
-  document.body.classList.add('vn-npc-routing-active');
+  root.classList.toggle('has-sprites', items.length > 0);
+  document.body.classList.toggle('vn-npc-routing-active', items.length > 0);
 }
 
 export function clearNpcSprites() {
