@@ -1,0 +1,14 @@
+{
+  "display_name": "VN NPC Sprites",
+  "loading_order": 50,
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Will / OpenAI Codex",
+  "version": "0.1.0",
+  "auto_update": false,
+  "minimum_client_version": "1.13.0",
+  "hooks": {
+    "disable": "onDisable",
+    "delete": "onDelete"
+  }
+}
