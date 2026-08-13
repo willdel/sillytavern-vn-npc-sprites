@@ -17,6 +17,13 @@ test('detects multiple physically present characters but not a remote business o
   assert.deepEqual(analysis.entrances.map(item => item.name), ['Sheri', 'Jade']);
 });
 
+test('does not confuse a lowercase color with a character named Amber', () => {
+  const colorCandidates = buildCandidates(['Tessa', 'Riley', 'Amber'].map(name => ({ name })));
+  const text = 'Tessa rolls her bracelet once, catching the amber light from the pastry case. Riley tilts her head.';
+  const analysis = analyzeScene(text, colorCandidates);
+  assert.deepEqual(analysis.entrances.map(item => item.name), ['Tessa', 'Riley']);
+});
+
 test('physical action adds a character and an exit removes one', () => {
   const entered = updateScene({ roster: [], location: null }, analyzeScene('Sadie taps her phone and looks at you.', candidates));
   assert.deepEqual(entered.roster, ['Sadie']);
