@@ -24,6 +24,8 @@ Reload SillyTavern, enable Visual Novel mode, and configure **Extensions -> VN N
 
 Character Expressions must already contain sprites for the matching card name. Transparent sprite images work best at a **2:3 aspect ratio**. Other ratios are supported but may leave more empty space or appear smaller in multi-character scenes.
 
+Emotion changes reuse the classifier selected in SillyTavern's built-in **Character Expressions** settings. Configure that classifier there; selecting `None` leaves the configured neutral fallback in use. In single-character scenes the whole visible response is classified. In multi-character scenes each character's named narration is classified separately and retained until it changes.
+
 ## Scene tracking
 
 The extension keeps a separate persistent roster for each chat. Explicit speakers and physical-presence cues add characters; exit cues remove them. A location change clears the old roster before adding characters at the new location. Ordinary conversational references do not add sprites.
