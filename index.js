@@ -49,7 +49,8 @@ function settings() {
 }
 
 function sceneKey() {
-  return String(context.chatId ?? `${context.groupId ?? 'character'}:${context.characterId ?? 'none'}`);
+  const currentChatId = context.getCurrentChatId?.() ?? context.chatId;
+  return String(currentChatId || `${context.groupId ?? 'character'}:${context.characterId ?? 'none'}:unsaved`);
 }
 
 function getScene() {
@@ -88,12 +89,12 @@ function setStatus(message) {
   $('#vn_npc_status').text(message);
 }
 
-async function updateBackground(location, scene) {
+async function updateBackground(location, scene, { force = false } = {}) {
   const config = settings();
   if (!config.backgroundsEnabled || !location) return { status: 'disabled-or-missing' };
   const mapping = resolveBackground(location, parseBackgroundMappings(config.backgroundMappings));
   if (!mapping) return { status: 'unmatched', location };
-  if (scene.backgroundFile === mapping.file) return { status: 'unchanged', location, file: mapping.file };
+  if (!force && scene.backgroundFile === mapping.file) return { status: 'unchanged', location, file: mapping.file };
   try {
     const result = await context.executeSlashCommandsWithOptions(`/bg ${JSON.stringify(mapping.file)}`, {
       handleParserErrors: false,
@@ -197,6 +198,7 @@ async function routeText(sceneText, responseText = sceneText) {
   if (changes) $('#vn_npc_status').append(` Scene update: ${changes}.`);
   if (config.expressionsEnabled && !expressionUpdates.length) $('#vn_npc_status').append(' Expression classifier returned no label; using sprite fallback.');
   if (backgroundUpdate.status === 'changed') $('#vn_npc_status').append(` Background: ${backgroundUpdate.file}.`);
+  if (backgroundUpdate.status === 'unchanged') $('#vn_npc_status').append(` Background mapping: ${backgroundUpdate.file} (already selected for this scene).`);
   if (backgroundUpdate.status === 'unmatched') $('#vn_npc_status').append(` No background mapping for: ${backgroundUpdate.location}.`);
   if (backgroundUpdate.status === 'error') $('#vn_npc_status').append(` Could not select background: ${backgroundUpdate.file}.`);
 }
@@ -359,8 +361,13 @@ async function initialize() {
   context.eventSource.on(context.eventTypes.MESSAGE_EDITED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, async () => {
     clearNpcSprites();
-    updateRosterUi();
-    await renderScene(getScene(), buildCandidates(characterLibrary, settings().aliases));
+    const scene = getScene();
+    const backgroundUpdate = await updateBackground(scene.backgroundLocation ?? scene.location, scene, { force: true });
+    saveScene(scene);
+    await renderScene(scene, buildCandidates(characterLibrary, settings().aliases));
+    if (backgroundUpdate.status === 'changed') $('#vn_npc_status').append(` Restored background: ${backgroundUpdate.file}.`);
+    if (backgroundUpdate.status === 'unmatched') $('#vn_npc_status').append(` No background mapping for: ${backgroundUpdate.location}.`);
+    if (backgroundUpdate.status === 'error') $('#vn_npc_status').append(` Could not restore background: ${backgroundUpdate.file}.`);
   });
   context.eventSource.on(context.eventTypes.CHARACTER_EDITED, async () => {
     clearSpriteCache();
