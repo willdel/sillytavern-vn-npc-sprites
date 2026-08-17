@@ -36,6 +36,8 @@ I use the [Freaky Frankenstein 5.2 Bolt preset](https://www.reddit.com/r/SillyTa
 
 The extension keeps a separate persistent roster for each chat. Explicit speakers and physical-presence cues add characters; exit cues remove them. A location change clears the old roster before adding characters at the new location. Ordinary conversational references do not add sprites.
 
+Scene, outfit, and background state are keyed to SillyTavern's current chat ID. Switching chats restores the background saved for that chat.
+
 Use **Add to scene**, **Remove from scene**, or **Clear scene** when prose is ambiguous.
 
 ## Action sprites
