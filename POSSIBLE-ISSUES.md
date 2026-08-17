@@ -54,7 +54,7 @@ Investigate whether the outfit expression label is unavailable, mismatched, or s
 
 ## 4. Automatic backgrounds can stop updating or reporting status
 
-**Status:** Open possible regression
+**Status:** Fix implemented in v0.6.2; awaiting verification
 
 Automatic background selection may stop changing the background after previously working. Background information also disappears from the extension's test/status output, including both successful mappings and unmatched-location notices.
 
@@ -63,6 +63,8 @@ Automatic background selection may stop changing the background after previously
 Investigate whether Location-header processing is reached on new messages and **Test latest AI message** execution after the outfit-tracking update. Test new chats both with and without a lorebook. Verify that background processing runs independently of character candidates, lorebook availability, and a non-empty scene roster, including when no matching NPC card is found. Check for early returns during sprite rendering and for later status updates that may erase the background result. Also verify that background settings survive extension updates.
 
 Useful evidence for later diagnosis includes the complete Location header, configured background mapping, current background filename, and full **Test latest AI message** output.
+
+The v0.6.2 fix uses SillyTavern's `getCurrentChatId()` API instead of allowing chats for the same character to share a fallback scene key. It also forcibly restores a chat's saved background when switching chats and reports mappings that were skipped as already selected.
 
 ## 5. Persistent outfit state can revert without a clothing change
 
