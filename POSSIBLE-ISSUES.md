@@ -54,7 +54,7 @@ Investigate whether the outfit expression label is unavailable, mismatched, or s
 
 ## 4. Automatic backgrounds can stop updating or reporting status
 
-**Status:** Fix implemented in v0.6.2; awaiting verification
+**Status:** Additional header-format fix implemented in v0.6.3; awaiting verification
 
 Automatic background selection may stop changing the background after previously working. Background information also disappears from the extension's test/status output, including both successful mappings and unmatched-location notices.
 
@@ -65,6 +65,8 @@ Investigate whether Location-header processing is reached on new messages and **
 Useful evidence for later diagnosis includes the complete Location header, configured background mapping, current background filename, and full **Test latest AI message** output.
 
 The v0.6.2 fix uses SillyTavern's `getCurrentChatId()` API instead of allowing chats for the same character to share a fallback scene key. It also forcibly restores a chat's saved background when switching chats and reports mappings that were skipped as already selected.
+
+Further testing found that some presets emit `ðŸ“ Apartment - Kitchen` while others emit `ðŸ“ Location: Apartment - Kitchen`. The original parser required the literal word `Location`, causing the first format to silently return no location. Version 0.6.3 supports both formats.
 
 ## 5. Persistent outfit state can revert without a clothing change
 
