@@ -56,9 +56,15 @@ test('a location change resets the previous roster', () => {
   assert.equal(result.locationChanged, true);
 });
 
+test('extracts a pin-only Location header without the Location label', () => {
+  const text = '**[ Time 5:22 PM | \u{1F4CD} Apartment - Kitchen | Clear ]**';
+  assert.equal(extractLocation(text), 'Apartment - Kitchen');
+});
+
 test('scene roster remains capped at five', () => {
   const result = updateScene({ roster: ['One', 'Two', 'Three', 'Four', 'Five'], location: null }, {
     entrances: [{ name: 'Six' }], exits: [], activeSpeaker: null, location: null,
   });
   assert.deepEqual(result.roster, ['Two', 'Three', 'Four', 'Five', 'Six']);
 });
+
