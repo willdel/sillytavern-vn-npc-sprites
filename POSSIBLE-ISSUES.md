@@ -103,3 +103,11 @@ Possible directions to evaluate later:
 
 The popup approach could avoid replacing a character's normal expression sprite and would make special-action images intentional rather than inferred from ordinary prose. No implementation decision has been made; further testing is needed.
 
+## 7. False exits and missed re-entry in narrative dialogue
+
+**Status:** Initial fix implemented in v0.6.4; awaiting verification
+
+The exit detector could assign another person's departure to a tracked character. For example, `Elle watches Will leave` removed Elle because her name appeared shortly before `leave`. After a Location change cleared the roster, `Elle lies on her back` did not restore her because `lies` was not included as a physical-presence cue. Dialogue embedded later in the same narrative paragraph was also not consistently attributed to Elle.
+
+Version 0.6.4 makes exit matching subject-bound, adds common presence verbs including lying, reclining, following, padding, reaching, and rising, and recognizes dialogue in a paragraph that begins with the character's name. Broader changes to how Location transitions clear the roster remain a separate design question.
+
