@@ -85,3 +85,21 @@ Investigate outfit-state storage and restoration across message processing, scen
 
 Expected behavior: an outfit remains active until a new outfit is reliably detected or the user manually resets/changes it.
 
+## 6. Action triggers can fire from out-of-context narration
+
+**Status:** Open detection and design issue; no change planned yet
+
+An action sprite can be selected when one of its configured trigger words appears in narration even though the tracked character is not actually performing that action. For example, the `dance` action may appear in the extension output because of an incidental or figurative wording quirk rather than because the character is dancing.
+
+This is a limitation of deterministic trigger-phrase matching. Adding more contextual language rules might reduce false positives, but could increase complexity, miss unconventional narration, or require additional model context/classification.
+
+Possible directions to evaluate later:
+
+- Require stronger action phrases instead of broad individual keywords.
+- Support negative/exclusion phrases in custom action definitions.
+- Require the character name or a tightly associated pronoun near the action.
+- Add an optional classifier for action validation, with awareness of context and latency costs.
+- Keep persistent VN sprites focused on expressions and outfits, while rare or important actions use explicit lorebook-generated directives to open dismissible event images in a popup.
+
+The popup approach could avoid replacing a character's normal expression sprite and would make special-action images intentional rather than inferred from ordinary prose. No implementation decision has been made; further testing is needed.
+
