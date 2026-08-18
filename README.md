@@ -72,7 +72,7 @@ Sunset Shores Apartments + Pool = apartment_pool.webp
 School + Pool = school_pool.webp
 ```
 
-When an AI message contains a structured `Location` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. A simple mapping such as `Bedroom` matches changing headers that contain that term. Use `+` to require several terms when a generic room name is ambiguous. Exact and more-specific mappings take priority over generic mappings. Matching ignores capitalization, repeated spaces, and typographic dash variants, and only examines the structured headerâ€”not ordinary narration. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
+When an AI message contains a structured `ðŸ“ Location: Name` or `ðŸ“ Name` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. A simple mapping such as `Bedroom` matches changing headers that contain that term. Use `+` to require several terms when a generic room name is ambiguous. Exact and more-specific mappings take priority over generic mappings. Matching ignores capitalization, repeated spaces, and typographic dash variants, and only examines the structured headerâ€”not ordinary narration. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
 
 ## Outfit sprites
 
