@@ -68,3 +68,29 @@ test('scene roster remains capped at five', () => {
   assert.deepEqual(result.roster, ['Two', 'Three', 'Four', 'Five', 'Six']);
 });
 
+test('does not remove an observer when another person leaves', () => {
+  const elleCandidates = buildCandidates(['Elle'].map(name => ({ name })));
+  const analysis = analyzeScene('Elle, meanwhile, watches Will leave with lazy satisfaction.', elleCandidates);
+  assert.deepEqual(analysis.exits.map(item => item.name), []);
+  assert.deepEqual(analysis.entrances.map(item => item.name), ['Elle']);
+});
+
+test('detects a character lying in the scene after a roster reset', () => {
+  const elleCandidates = buildCandidates(['Elle'].map(name => ({ name })));
+  const result = updateScene({ roster: [], location: 'Apartment - Hallway' }, analyzeScene('[ Location: Apartment - Living Room/Kitchen ]\nElle lies on her back on the rug.', elleCandidates));
+  assert.deepEqual(result.roster, ['Elle']);
+});
+
+test('attributes dialogue to a named narration paragraph', () => {
+  const elleCandidates = buildCandidates(['Elle'].map(name => ({ name })));
+  const analysis = analyzeScene('**Elle rocks toward you and pushes up on both elbows.** **"Perfect timing."**', elleCandidates);
+  assert.equal(analysis.activeSpeaker?.name, 'Elle');
+  assert.deepEqual(analysis.entrances.map(item => item.name), ['Elle']);
+});
+
+test('still detects direct character exits', () => {
+  const elleCandidates = buildCandidates(['Elle'].map(name => ({ name })));
+  assert.deepEqual(analyzeScene('Elle quietly leaves the room.', elleCandidates).exits.map(item => item.name), ['Elle']);
+  assert.deepEqual(analyzeScene('Elle walks away.', elleCandidates).exits.map(item => item.name), ['Elle']);
+});
+
