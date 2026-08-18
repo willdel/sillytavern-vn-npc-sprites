@@ -10,7 +10,9 @@ export function visibleNarration(text) {
 }
 
 export function extractLocation(text) {
-  const match = visibleNarration(text).match(/\bLocation\s*[: ]\s*([^|\]\n]+)/iu);
+  const source = visibleNarration(text);
+  const match = source.match(/\u{1F4CD}\uFE0F?\s*(?:Location\b\s*[: ]\s*)?([^|\]\n]+)/iu)
+    ?? source.match(/\bLocation\s*[: ]\s*([^|\]\n]+)/iu);
   return match?.[1]?.trim().replace(/\s+/g, ' ') ?? null;
 }
 
@@ -68,3 +70,4 @@ export function updateScene(previous, analysis, { limit = 5 } = {}) {
   if (next.length > limit) next = next.slice(-limit);
   return { roster: next, location: analysis.location ?? previous.location ?? null, activeSpeaker: analysis.activeSpeaker?.name ?? null, locationChanged };
 }
+
