@@ -279,19 +279,20 @@ async function routeText(sceneText, responseText = sceneText) {
   scene.backgroundLocation = previous.backgroundLocation ?? null;
   const definitions = parseActionDefinitions(config.actionDefinitions);
   const actionUpdates = config.actionsEnabled ? detectActions(responseText, scene.roster.map(name => ({ name })), definitions) : [];
-  scene.actionStates = updateActionStates(scene.locationChanged ? {} : previous.actionStates, scene.roster, actionUpdates);
+  scene.actionStates = updateActionStates(previous.actionStates, scene.roster, actionUpdates);
   const expressionUpdates = await classifyExpressions(responseText, scene.roster, config);
-  scene.expressionStates = updateExpressionStates(scene.locationChanged ? {} : previous.expressionStates, scene.roster, expressionUpdates);
+  scene.expressionStates = updateExpressionStates(previous.expressionStates, scene.roster, expressionUpdates);
   const outfitDefinitions = parseOutfitDefinitions(config.outfitDefinitions);
   const outfitUpdates = config.outfitsEnabled ? detectOutfits(responseText, scene.roster.map(name => ({ name })), outfitDefinitions) : [];
-  scene.outfitStates = updateOutfitStates(scene.locationChanged ? {} : previous.outfitStates, scene.roster, outfitUpdates, config.defaultOutfit);
+  scene.outfitStates = updateOutfitStates(previous.outfitStates, scene.roster, outfitUpdates, config.defaultOutfit);
   const backgroundUpdate = await updateBackground(analysis.location, scene);
   saveScene(scene);
   await renderScene(scene, candidates);
   const changes = [
     analysis.entrances.length ? `added ${analysis.entrances.map(item => item.name).join(', ')}` : '',
     analysis.exits.length ? `removed ${analysis.exits.map(item => item.name).join(', ')}` : '',
-    scene.locationChanged ? 'cleared for location change' : '',
+    Array.isArray(analysis.present) ? `Present header ${scene.roster.length ? scene.roster.join(', ') : 'None'}` : '',
+    scene.locationChanged ? (Array.isArray(analysis.present) ? 'location changed; roster preserved by Present header' : 'cleared for location change') : '',
     actionUpdates.length ? `actions ${actionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
     expressionUpdates.length ? `expressions ${expressionUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
     outfitUpdates.length ? `outfits ${outfitUpdates.map(item => `${item.name}=${item.label}`).join(', ')}` : '',
