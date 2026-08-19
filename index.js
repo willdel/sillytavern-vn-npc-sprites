@@ -147,7 +147,7 @@ async function displayEvent(characterValue, imageValue) {
   if (!sprite?.path) return { ok: false, message: `No event sprite found for ${character.name}: event_${String(imageValue).replace(/^event_/i, '')}.` };
   showEventPopup({
     path: sprite.path,
-    title: `${character.name} â€” ${String(sprite.label).replace(/^event_/i, '')}`,
+    title: `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`,
     size: config.eventSize,
     position: config.eventPosition,
     onMove: position => {
