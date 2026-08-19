@@ -17,6 +17,25 @@ export function extractLocation(text) {
   return match?.[1]?.trim().replace(/\s+/g, ' ') ?? null;
 }
 
+export function extractPresentCharacters(text, candidates) {
+  const match = visibleNarration(text).match(/\bPresent\s*:\s*([^|\]\n]+)/iu);
+  if (!match) return null;
+  const value = match[1].trim();
+  if (/^(?:none|no\s+(?:npcs?|characters?)|n\/a)$/iu.test(value)) return [];
+  const matches = [];
+  for (const candidate of candidates) {
+    const token = escapeRegExp(candidate.token);
+    const found = new RegExp(`(?<![\\p{L}\\p{N}_])${token}(?![\\p{L}\\p{N}_])`, 'iu').exec(value);
+    if (found) matches.push({ ...candidate, reason: 'present-header', index: found.index });
+  }
+  const byCharacter = new Map();
+  for (const candidate of matches.sort((a, b) => a.index - b.index)) {
+    const key = candidate.name.toLocaleLowerCase();
+    if (!byCharacter.has(key)) byCharacter.set(key, candidate);
+  }
+  return [...byCharacter.values()];
+}
+
 function firstMatchIndex(source, patterns) {
   let index = -1;
   for (const pattern of patterns) {
@@ -28,6 +47,7 @@ function firstMatchIndex(source, patterns) {
 
 export function analyzeScene(text, candidates) {
   const source = visibleNarration(text);
+  const present = extractPresentCharacters(source, candidates);
   const entrances = [];
   const exits = [];
   const speakers = [];
@@ -58,17 +78,22 @@ export function analyzeScene(text, candidates) {
   speakers.sort((a, b) => a.index - b.index);
   entrances.sort((a, b) => a.index - b.index);
   exits.sort((a, b) => a.index - b.index);
-  return { entrances, exits, activeSpeaker: speakers.at(-1) ?? null, location: extractLocation(source) };
+  return { entrances, exits, present, activeSpeaker: speakers.at(-1) ?? null, location: extractLocation(source) };
 }
 
 export function updateScene(previous, analysis, { limit = 5 } = {}) {
   const locationChanged = Boolean(previous.location && analysis.location && previous.location !== analysis.location);
-  const roster = locationChanged ? [] : [...(previous.roster ?? [])];
+  const hasPresentHeader = Array.isArray(analysis.present);
+  const roster = hasPresentHeader
+    ? analysis.present.map(item => item.name)
+    : (locationChanged ? [] : [...(previous.roster ?? [])]);
   const exited = new Set(analysis.exits.map(item => item.name.toLocaleLowerCase()));
-  let next = roster.filter(name => !exited.has(name.toLocaleLowerCase()));
-  for (const character of analysis.entrances) {
-    next = next.filter(name => name.toLocaleLowerCase() !== character.name.toLocaleLowerCase());
-    next.push(character.name);
+  let next = hasPresentHeader ? roster : roster.filter(name => !exited.has(name.toLocaleLowerCase()));
+  if (!hasPresentHeader) {
+    for (const character of analysis.entrances) {
+      next = next.filter(name => name.toLocaleLowerCase() !== character.name.toLocaleLowerCase());
+      next.push(character.name);
+    }
   }
   if (next.length > limit) next = next.slice(-limit);
   return { roster: next, location: analysis.location ?? previous.location ?? null, activeSpeaker: analysis.activeSpeaker?.name ?? null, locationChanged };
