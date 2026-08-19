@@ -45,6 +45,28 @@
       <label for="vn_npc_background_mappings">Backgrounds (Location = uploaded background filename)</label>
       <textarea id="vn_npc_background_mappings" class="text_pole" rows="6" placeholder="Bedroom = bedroom.webp&#10;Driftline Beach - North Cove Path = north-cove.webp"></textarea>
       <small>Each term must appear in the Location header. Use + to require multiple terms, such as Sunset Shores Apartments + Pool. More-specific mappings win. Unmatched locations keep the current background.</small>
+      <hr>
+      <b>VN event images</b>
+      <label class="checkbox_label" for="vn_events_enabled">
+        <input id="vn_events_enabled" type="checkbox">
+        <span>Enable lorebook and manual event-image popups</span>
+      </label>
+      <label for="vn_event_size">Event image size (pixels)</label>
+      <input id="vn_event_size" class="text_pole" type="number" min="180" max="1200" step="10">
+      <label for="vn_event_character">Character in current scene</label>
+      <select id="vn_event_character" class="text_pole"></select>
+      <label for="vn_event_character_search">Or search all character cards</label>
+      <input id="vn_event_character_search" class="text_pole" type="text" list="vn_event_character_list" placeholder="Type an exact character name">
+      <datalist id="vn_event_character_list"></datalist>
+      <label for="vn_event_image">Event image</label>
+      <select id="vn_event_image" class="text_pole"></select>
+      <small>Event images are sprites whose labels begin with event_, such as event_special_dance.webp.</small>
+      <div class="vn-npc-actions">
+        <button id="vn_event_show" class="menu_button" type="button">Show event</button>
+        <button id="vn_event_close" class="menu_button" type="button">Close event</button>
+        <button id="vn_event_replay" class="menu_button" type="button">Replay latest directive</button>
+      </div>
+      <small>Automatic format: &lt;vn-event character="Elle" image="special_dance"&gt;. Manual command: /vn-event character="Elle" image="special_dance".</small>
       <div class="vn-npc-actions">
         <button id="vn_npc_test" class="menu_button" type="button">Test latest AI message</button>
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>
