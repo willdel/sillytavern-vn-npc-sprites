@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCandidates } from '../modules/detection.js';
-import { analyzeScene, extractLocation, updateScene } from '../modules/scene-tracker.js';
+import { analyzeScene, extractLocation, extractPresentCharacters, updateScene } from '../modules/scene-tracker.js';
 
 const candidates = buildCandidates(['Sadie', 'Laura', 'Tessa'].map(name => ({ name })));
 
@@ -92,5 +92,27 @@ test('still detects direct character exits', () => {
   const elleCandidates = buildCandidates(['Elle'].map(name => ({ name })));
   assert.deepEqual(analyzeScene('Elle quietly leaves the room.', elleCandidates).exits.map(item => item.name), ['Elle']);
   assert.deepEqual(analyzeScene('Elle walks away.', elleCandidates).exits.map(item => item.name), ['Elle']);
+});
+
+test('uses the Present header as the authoritative roster', () => {
+  const sceneCandidates = buildCandidates(['Blaire', 'Elle', 'Bunny'].map(name => ({ name })));
+  const text = '[ Location: Apartment - Living Room | Present: Blaire, Elle ]\nBunny is mentioned on television.';
+  const analysis = analyzeScene(text, sceneCandidates);
+  assert.deepEqual(analysis.present.map(item => item.name), ['Blaire', 'Elle']);
+  const result = updateScene({ roster: ['Bunny'], location: 'Apartment - Kitchen' }, analysis);
+  assert.deepEqual(result.roster, ['Blaire', 'Elle']);
+});
+
+test('Present None explicitly clears the roster', () => {
+  assert.deepEqual(extractPresentCharacters('[ Present: None ]', candidates), []);
+  const result = updateScene({ roster: ['Blaire'], location: 'Apartment' }, analyzeScene('[ Location: Apartment | Present: None ]', candidates));
+  assert.deepEqual(result.roster, []);
+});
+
+test('Present header restores Blaire despite an unrecognized narrative verb', () => {
+  const blaireCandidates = buildCandidates([{ name: 'Blaire' }]);
+  const text = '[ Location: Apartment - Living Room | Present: Blaire ]\nBlaire shuffles back from the kitchen.';
+  const result = updateScene({ roster: [], location: 'Apartment - Living Room/Kitchen' }, analyzeScene(text, blaireCandidates));
+  assert.deepEqual(result.roster, ['Blaire']);
 });
 
