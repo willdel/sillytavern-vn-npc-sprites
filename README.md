@@ -101,6 +101,42 @@ swimwear_walking.webp
 
 Selection order is outfit action, outfit expression, outfit neutral, unprefixed action, unprefixed expression, unprefixed neutral, then the character-card avatar. Custom outfit categories can be added to the definitions without updating the extension.
 
+## VN event images
+
+Special actions and story illustrations can open in a separate draggable popup without replacing the normal expression/outfit sprites. Add event images to the character's existing Character Expressions sprite folder with an `event_` prefix:
+
+```text
+event_special_dance.webp
+event_first_kiss.webp
+event_movie_night.webp
+```
+
+Transparent PNG and WebP images remain transparent. The popup defaults to 650 Ã— 650 pixels near the upper-right, preserves image aspect ratio, and can be dragged by its small header. Close it with the header's **Ã—** icon or the keyboard's **Esc** key. The reset icon or a double-click on the handle returns it to the default position. Position and configured size are remembered.
+
+An AI response or lorebook instruction can trigger an event with:
+
+```text
+<vn-event character="Elle" image="special_dance">
+```
+
+The extension hides this directive from the rendered chat while retaining it in the stored message. It accepts the image name with or without the `event_` prefix. If several valid directives occur in one response, the last directive is shown. A directive is shown once per message/swipe unless manually replayed.
+
+Manual alternatives:
+
+```text
+/vn-event character="Elle" image="special_dance"
+```
+
+The slash command does not enter the roleplay history or get sent to the model. The extension settings also provide a scene-character dropdown, a searchable all-card field, an event-image dropdown, **Show event**, **Close event**, and **Replay latest directive** controls. Automatic directives can resolve any character card or configured alias even when that character is not in the scene dropdown.
+
+Suggested lorebook instruction:
+
+```text
+When this event actually occurs, append this control tag on its own line at the end of the response:
+<vn-event character="Elle" image="special_dance">
+Do not emit the tag when the event is merely discussed, anticipated, remembered, or declined.
+```
+
 ## Architecture
 
 - `detection.js`: character names and aliases.
