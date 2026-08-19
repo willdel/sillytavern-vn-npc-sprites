@@ -31,10 +31,10 @@ function ensurePopup() {
   popup.hidden = true;
   popup.innerHTML = `
     <div class="vn-event-handle" title="Drag event image. Double-click to reset position.">
-      <span class="vn-event-grip">â ¿</span>
+      <span class="vn-event-grip">&#10247;</span>
       <span class="vn-event-title"></span>
-      <button class="vn-event-reset" type="button" title="Reset position" aria-label="Reset event image position">â†º</button>
-      <button class="vn-event-close" type="button" title="Close" aria-label="Close event image">Ã—</button>
+      <button class="vn-event-reset" type="button" title="Reset position" aria-label="Reset event image position">&#8634;</button>
+      <button class="vn-event-close" type="button" title="Close" aria-label="Close event image">&times;</button>
     </div>
     <img class="vn-event-image" alt="VN event image">
   `;
