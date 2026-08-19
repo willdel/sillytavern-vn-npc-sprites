@@ -22,7 +22,7 @@ The shorter mapping now selects `bedroom.webp` when `Bedroom` appears in the str
 
 ## 2. Scene roster can be lost when characters are unnamed
 
-**Status:** Open possible bug and persistence enhancement
+**Status:** Structured-header fix implemented in v0.7.2; prose-only recovery remains an enhancement idea
 
 A character's sprite can disappear when the latest response does not name them, even if the character speaks or performs actions. This occurs most often after manually resetting the scene, switching to another chat, or returning to an existing chat. **Test latest AI message** may then report that no characters are in the scene until a later response explicitly names them again.
 
@@ -34,6 +34,8 @@ Possible approaches to evaluate later:
 - Use a bounded lookback only when the current roster is unexpectedly empty.
 - Process the lookback chronologically, including entrance, exit, and location-change events.
 - Store explicit scene-state checkpoints rather than re-detecting names from isolated messages.
+
+Version 0.7.2 adds authoritative parsing for a structured `Present:` header. When available, it replaces fragile prose inference and preserves character state across Location changes. Chats without this field still use the fallback behavior described above.
 
 ## 3. Missing action sprite can discard the active outfit
 
