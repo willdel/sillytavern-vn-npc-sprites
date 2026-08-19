@@ -34,9 +34,15 @@ I use the [Freaky Frankenstein 5.2 Bolt preset](https://www.reddit.com/r/SillyTa
 
 ## Scene tracking
 
-The extension keeps a separate persistent roster for each chat. Explicit speakers, named narrative dialogue paragraphs, and physical-presence cues add characters; subject-bound exit cues remove them. A location change clears the old roster before adding characters at the new location. Ordinary conversational references do not add sprites.
+The extension keeps a separate persistent roster for each chat. When a structured header contains `Present:`, that list is authoritative: listed card names or aliases are displayed, omitted characters are removed, and `Present: None` clears the roster. This prevents ordinary narrative wording and small Location changes from losing characters who remain in the scene.
 
-Scene, outfit, and background state are keyed to SillyTavern's current chat ID. Switching chats restores the background saved for that chat.
+```text
+[ Location: Apartment - Living Room | Present: Blaire, Elle ]
+```
+
+When the field is absent, explicit speakers, named narrative dialogue paragraphs, and physical-presence cues add characters; subject-bound exit cues remove them. A Location change clears the inferred roster before adding characters detected at the new location. Ordinary conversational references do not add sprites.
+
+Scene, outfit, and background state are keyed to SillyTavern's current chat ID. Switching chats restores the background saved for that chat. Outfit, expression, and persistent-action state remains attached to characters who stay in an authoritative Present list across a Location change.
 
 Use **Add to scene**, **Remove from scene**, or **Clear scene** when prose is ambiguous.
 
