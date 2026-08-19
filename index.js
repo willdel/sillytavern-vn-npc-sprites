@@ -6,12 +6,15 @@ import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDe
 import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
 import { parseBackgroundMappings, resolveBackground } from './modules/background-tracker.js';
 import { DEFAULT_OUTFIT_DEFINITIONS, detectOutfits, parseOutfitDefinitions, updateOutfitStates } from './modules/outfit-tracker.js';
+import { listEventSprites, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
+import { closeEventPopup, removeEventPopup, showEventPopup } from './modules/event-popup.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', eventsEnabled: true, eventSize: 650, eventPosition: null, scenes: {} });
 let context;
 let characterLibrary = [];
+const shownEventDirectives = new Set();
 
 async function refreshCharacterLibrary() {
   try {
@@ -44,6 +47,9 @@ function settings() {
   config.outfitDefinitions ??= DEFAULTS.outfitDefinitions;
   config.backgroundsEnabled ??= DEFAULTS.backgroundsEnabled;
   config.backgroundMappings ??= DEFAULTS.backgroundMappings;
+  config.eventsEnabled ??= DEFAULTS.eventsEnabled;
+  config.eventSize ??= DEFAULTS.eventSize;
+  config.eventPosition ??= DEFAULTS.eventPosition;
   config.scenes ??= {};
   return config;
 }
@@ -65,6 +71,7 @@ function saveScene(scene) {
   settings().scenes[sceneKey()] = scene;
   context.saveSettingsDebounced();
   updateRosterUi(scene);
+  populateEventCharacterPicker(scene);
 }
 
 function updateRosterUi(scene = getScene()) {
@@ -83,6 +90,98 @@ function populateCharacterPicker() {
   for (const character of [...characterLibrary].sort((a, b) => String(a.name).localeCompare(String(b.name)))) {
     if (character?.name) picker.append($('<option>').val(character.name).text(character.name));
   }
+}
+
+function findEventCharacter(value) {
+  const wanted = String(value ?? '').trim().toLocaleLowerCase();
+  if (!wanted) return null;
+  return buildCandidates(characterLibrary, settings().aliases).find(candidate => candidate.token.toLocaleLowerCase() === wanted || candidate.name.toLocaleLowerCase() === wanted) ?? null;
+}
+
+function populateEventCharacterPicker(scene = getScene()) {
+  const picker = $('#vn_event_character');
+  if (!picker.length) return;
+  const selected = String(picker.val() ?? '');
+  picker.empty();
+  for (const name of scene.roster) picker.append($('<option>').val(name).text(name));
+  picker.prop('disabled', !scene.roster.length);
+  if (scene.roster.includes(selected)) picker.val(selected);
+  else if (scene.activeSpeaker && scene.roster.includes(scene.activeSpeaker)) picker.val(scene.activeSpeaker);
+  populateEventPicker(String(picker.val() ?? ''));
+}
+
+function populateEventSearchList() {
+  const list = $('#vn_event_character_list').empty();
+  for (const character of [...characterLibrary].sort((a, b) => String(a.name).localeCompare(String(b.name)))) {
+    if (character?.name) list.append($('<option>').val(character.name));
+  }
+}
+
+async function populateEventPicker(characterName) {
+  const picker = $('#vn_event_image').empty();
+  if (!characterName) return picker.prop('disabled', true);
+  try {
+    const events = listEventSprites(await getSprites(characterName));
+    for (const sprite of events) {
+      const label = String(sprite.label);
+      picker.append($('<option>').val(label).text(label.replace(/^event_/i, '')));
+    }
+    picker.prop('disabled', !events.length);
+  } catch (error) {
+    console.warn(`[${MODULE_NAME}] Could not list event sprites for ${characterName}.`, error);
+    picker.prop('disabled', true);
+  }
+}
+
+function selectedEventCharacter() {
+  const searched = String($('#vn_event_character_search').val() ?? '').trim();
+  return findEventCharacter(searched)?.name ?? String($('#vn_event_character').val() ?? '');
+}
+
+async function displayEvent(characterValue, imageValue) {
+  const config = settings();
+  if (!config.eventsEnabled) return { ok: false, message: 'VN event images are disabled.' };
+  const character = findEventCharacter(characterValue);
+  if (!character) return { ok: false, message: `No character card or alias matched: ${characterValue || '(missing)'}.` };
+  const sprite = resolveEventSprite(await getSprites(character.name), imageValue);
+  if (!sprite?.path) return { ok: false, message: `No event sprite found for ${character.name}: event_${String(imageValue).replace(/^event_/i, '')}.` };
+  showEventPopup({
+    path: sprite.path,
+    title: `${character.name} â€” ${String(sprite.label).replace(/^event_/i, '')}`,
+    size: config.eventSize,
+    position: config.eventPosition,
+    onMove: position => {
+      config.eventPosition = position;
+      context.saveSettingsDebounced();
+    },
+  });
+  return { ok: true, message: `Showing event image ${sprite.label} for ${character.name}.` };
+}
+
+function hideRenderedEventDirectives(messageId) {
+  const id = Number.isInteger(messageId) ? messageId : context.chat.findLastIndex(item => !item.is_user && !item.is_system);
+  if (id < 0) return;
+  const block = $(`#chat .mes[mesid="${id}"] .mes_text`);
+  block.find('vn-event').remove();
+  block.each((_, element) => {
+    element.innerHTML = element.innerHTML
+      .replace(/&lt;vn-event\b.*?&gt;/giu, '')
+      .replace(/<vn-event\b[^>]*>/giu, '');
+  });
+}
+
+async function processEventDirectives(messageId, text, { force = false } = {}) {
+  hideRenderedEventDirectives(messageId);
+  const directives = parseEventDirectives(text).filter(item => item.character && item.image);
+  if (!directives.length || !settings().eventsEnabled) return null;
+  const directive = directives.at(-1);
+  const message = Number.isInteger(messageId) ? context.chat[messageId] : null;
+  const key = `${sceneKey()}:${messageId}:${message?.swipe_id ?? 0}:${directive.raw}`;
+  if (!force && shownEventDirectives.has(key)) return null;
+  shownEventDirectives.add(key);
+  const result = await displayEvent(directive.character, directive.image);
+  $('#vn_npc_status').append(` ${result.message}`);
+  return result;
 }
 
 function setStatus(message) {
@@ -168,6 +267,8 @@ async function renderScene(scene, candidates) {
 }
 
 async function routeText(sceneText, responseText = sceneText) {
+  sceneText = stripEventDirectives(sceneText);
+  responseText = stripEventDirectives(responseText);
   const config = settings();
   const library = characterLibrary.length ? characterLibrary : await refreshCharacterLibrary();
   const candidates = buildCandidates(library, config.aliases);
@@ -230,7 +331,10 @@ function latestSceneText(messageId) {
 }
 
 async function onCharacterMessage(messageId) {
-  await routeText(latestSceneText(messageId), latestAiText(messageId));
+  const text = latestAiText(messageId);
+  hideRenderedEventDirectives(messageId);
+  await routeText(latestSceneText(messageId), text);
+  await processEventDirectives(messageId, text);
 }
 
 function bindSettings() {
@@ -281,6 +385,37 @@ function bindSettings() {
   $('#vn_npc_background_mappings').val(config.backgroundMappings).on('input', function () {
     config.backgroundMappings = this.value;
     context.saveSettingsDebounced();
+  });
+  $('#vn_events_enabled').prop('checked', config.eventsEnabled).on('input', function () {
+    config.eventsEnabled = this.checked;
+    if (!config.eventsEnabled) closeEventPopup();
+    context.saveSettingsDebounced();
+  });
+  $('#vn_event_size').val(config.eventSize).on('change', function () {
+    config.eventSize = Math.min(1200, Math.max(180, Number(this.value) || 650));
+    this.value = config.eventSize;
+    context.saveSettingsDebounced();
+  });
+  $('#vn_event_character').on('change', function () {
+    $('#vn_event_character_search').val('');
+    populateEventPicker(String(this.value ?? ''));
+  });
+  $('#vn_event_character_search').on('change', function () {
+    const match = findEventCharacter(this.value);
+    if (match) populateEventPicker(match.name);
+  });
+  $('#vn_event_show').on('click', async () => {
+    const result = await displayEvent(selectedEventCharacter(), String($('#vn_event_image').val() ?? ''));
+    setStatus(result.message);
+  });
+  $('#vn_event_close').on('click', () => {
+    closeEventPopup();
+    setStatus('Event image closed.');
+  });
+  $('#vn_event_replay').on('click', async () => {
+    const messageId = context.chat.findLastIndex(item => !item.is_user && !item.is_system);
+    const result = await processEventDirectives(messageId, latestAiText(messageId), { force: true });
+    if (!result) setStatus('No valid VN event directive found in the latest AI message.');
   });
   $('#vn_npc_test').on('click', () => routeText(latestSceneText(), latestAiText()));
   $('#vn_npc_add').on('click', async () => {
@@ -349,6 +484,33 @@ function populateOutfitPicker() {
   for (const label of labels) picker.append($('<option>').val(label).text(label));
 }
 
+function registerEventSlashCommand() {
+  context.SlashCommandParser.addCommandObject(context.SlashCommand.fromProps({
+    name: 'vn-event',
+    callback: async args => {
+      const result = await displayEvent(String(args.character ?? ''), String(args.image ?? ''));
+      setStatus(result.message);
+      return result.message;
+    },
+    namedArgumentList: [
+      context.SlashCommandNamedArgument.fromProps({
+        name: 'character',
+        description: 'Character card name or configured alias.',
+        typeList: [context.ARGUMENT_TYPE.STRING],
+        isRequired: true,
+      }),
+      context.SlashCommandNamedArgument.fromProps({
+        name: 'image',
+        description: 'Event sprite label, with or without the event_ prefix.',
+        typeList: [context.ARGUMENT_TYPE.STRING],
+        isRequired: true,
+      }),
+    ],
+    helpString: 'Shows a draggable VN event image. Example: /vn-event character="Elle" image="special_dance"',
+    returns: 'Event display status.',
+  }));
+}
+
 async function initialize() {
   context = SillyTavern.getContext();
   settings();
@@ -356,11 +518,13 @@ async function initialize() {
   $('#extensions_settings2').append(html);
   bindSettings();
   populateOutfitPicker();
+  registerEventSlashCommand();
   context.eventSource.on(context.eventTypes.CHARACTER_MESSAGE_RENDERED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.MESSAGE_SWIPED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.MESSAGE_EDITED, onCharacterMessage);
   context.eventSource.on(context.eventTypes.CHAT_CHANGED, async () => {
     clearNpcSprites();
+    closeEventPopup();
     const scene = getScene();
     const backgroundUpdate = await updateBackground(scene.backgroundLocation ?? scene.location, scene, { force: true });
     saveScene(scene);
@@ -373,18 +537,24 @@ async function initialize() {
     clearSpriteCache();
     await refreshCharacterLibrary();
     populateCharacterPicker();
+    populateEventSearchList();
+    populateEventCharacterPicker();
   });
   await refreshCharacterLibrary();
   populateCharacterPicker();
+  populateEventSearchList();
+  populateEventCharacterPicker();
   updateRosterUi();
 }
 
 export function onDisable() {
   clearNpcSprites();
+  closeEventPopup();
 }
 
 export function onDelete() {
   removeRenderer();
+  removeEventPopup();
 }
 
 jQuery(initialize);
