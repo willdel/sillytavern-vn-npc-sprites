@@ -78,7 +78,7 @@ Sunset Shores Apartments + Pool = apartment_pool.webp
 School + Pool = school_pool.webp
 ```
 
-When an AI message contains a structured `ðŸ“ Location: Name` or `ðŸ“ Name` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. A simple mapping such as `Bedroom` matches changing headers that contain that term. Use `+` to require several terms when a generic room name is ambiguous. Exact and more-specific mappings take priority over generic mappings. Matching ignores capitalization, repeated spaces, and typographic dash variants, and only examines the structured headerâ€”not ordinary narration. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
+When an AI message contains a structured `📍 Location: Name` or `📍 Name` header, the extension selects the mapped file through SillyTavern's built-in `/bg` command. A simple mapping such as `Bedroom` matches changing headers that contain that term. Use `+` to require several terms when a generic room name is ambiguous. Exact and more-specific mappings take priority over generic mappings. Matching ignores capitalization, repeated spaces, and typographic dash variants, and only examines the structured header—not ordinary narration. If no mapping exists, the current background remains unchanged and the test status reports the unmatched location.
 
 ## Outfit sprites
 
@@ -117,7 +117,7 @@ event_first_kiss.webp
 event_movie_night.webp
 ```
 
-Transparent PNG and WebP images remain transparent. The popup defaults to 650 Ã— 650 pixels near the upper-right, preserves image aspect ratio, and can be dragged by its small header. Close it with the header's **Ã—** icon or the keyboard's **Esc** key. The reset icon or a double-click on the handle returns it to the default position. Position and configured size are remembered.
+Transparent PNG and WebP images remain transparent. The popup defaults to 650 × 650 pixels near the upper-right, preserves image aspect ratio, and can be dragged by its small header. Close it with the header's **×** icon or the keyboard's **Esc** key. The reset icon or a double-click on the handle returns it to the default position. Position and configured size are remembered.
 
 An AI response or lorebook instruction can trigger an event with:
 
@@ -134,6 +134,8 @@ Manual alternatives:
 ```
 
 The slash command does not enter the roleplay history or get sent to the model. The extension settings also provide a scene-character dropdown, a searchable all-card field, an event-image dropdown, **Show event**, **Close event**, and **Replay latest directive** controls. Automatic directives can resolve any character card or configured alias even when that character is not in the scene dropdown.
+
+For faster manual use, a collapsible **Event** launcher appears directly above the chat input. It lists only characters in the current scene, loads the selected character's available `event_*` images, and opens the existing popup without adding anything to chat or starting a generation. Use **All cards…** when the desired character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
 
 Suggested lorebook instruction:
 

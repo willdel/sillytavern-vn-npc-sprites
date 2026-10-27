@@ -11,10 +11,11 @@ import { closeEventPopup, removeEventPopup, showEventPopup } from './modules/eve
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', eventsEnabled: true, eventSize: 650, eventPosition: null, scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', eventsEnabled: true, eventSize: 650, eventPosition: null, eventLauncherExpanded: false, scenes: {} });
 let context;
 let characterLibrary = [];
 const shownEventDirectives = new Set();
+let launcherEventRequest = 0;
 
 async function refreshCharacterLibrary() {
   try {
@@ -50,6 +51,7 @@ function settings() {
   config.eventsEnabled ??= DEFAULTS.eventsEnabled;
   config.eventSize ??= DEFAULTS.eventSize;
   config.eventPosition ??= DEFAULTS.eventPosition;
+  config.eventLauncherExpanded ??= DEFAULTS.eventLauncherExpanded;
   config.scenes ??= {};
   return config;
 }
@@ -72,6 +74,7 @@ function saveScene(scene) {
   context.saveSettingsDebounced();
   updateRosterUi(scene);
   populateEventCharacterPicker(scene);
+  populateEventLauncherCharacters(scene);
 }
 
 function updateRosterUi(scene = getScene()) {
@@ -131,6 +134,144 @@ async function populateEventPicker(characterName) {
     console.warn(`[${MODULE_NAME}] Could not list event sprites for ${characterName}.`, error);
     picker.prop('disabled', true);
   }
+}
+
+function ensureEventLauncher() {
+  const existing = document.getElementById('vn-event-launcher');
+  if (existing) return existing;
+  const sendForm = document.getElementById('send_form');
+  if (!sendForm) return null;
+
+  const launcher = document.createElement('div');
+  launcher.id = 'vn-event-launcher';
+  launcher.innerHTML = `
+    <button id="vn-event-launcher-toggle" class="menu_button" type="button" aria-expanded="false" title="Open the VN event image launcher">
+      <i class="fa-solid fa-clapperboard" aria-hidden="true"></i>
+      <span>Event</span>
+      <i class="vn-event-launcher-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+    </button>
+    <div id="vn-event-launcher-controls" hidden>
+      <label class="vn-event-launcher-field">
+        <span>Character</span>
+        <select id="vn-event-launcher-character" class="text_pole" aria-label="Present character"></select>
+      </label>
+      <button id="vn-event-launcher-all" class="menu_button" type="button" aria-pressed="false" title="Choose from all character cards">All cards…</button>
+      <label id="vn-event-launcher-search-wrap" class="vn-event-launcher-field" hidden>
+        <span>All cards</span>
+        <input id="vn-event-launcher-search" class="text_pole" type="text" list="vn_event_character_list" placeholder="Exact character name" aria-label="Search all character cards">
+      </label>
+      <label class="vn-event-launcher-field">
+        <span>Event</span>
+        <select id="vn-event-launcher-image" class="text_pole" aria-label="Event image"></select>
+      </label>
+      <button id="vn-event-launcher-show" class="menu_button" type="button" disabled>Show</button>
+    </div>
+  `;
+  const inputRow = sendForm.querySelector('#nonQRFormItems');
+  if (inputRow) inputRow.insertAdjacentElement('beforebegin', launcher);
+  else sendForm.prepend(launcher);
+
+  $('#vn-event-launcher-toggle').on('click', () => setEventLauncherExpanded(!settings().eventLauncherExpanded));
+  $('#vn-event-launcher-character').on('change', function () {
+    populateEventLauncherImages(String(this.value ?? ''));
+  });
+  $('#vn-event-launcher-all').on('click', () => setEventLauncherAllCards($('#vn-event-launcher-all').attr('aria-pressed') !== 'true'));
+  $('#vn-event-launcher-search').on('input change', function () {
+    const character = findEventCharacter(this.value)?.name ?? '';
+    populateEventLauncherImages(character);
+  });
+  $('#vn-event-launcher-show').on('click', async () => {
+    const result = await displayEvent(selectedEventLauncherCharacter(), String($('#vn-event-launcher-image').val() ?? ''));
+    setStatus(result.message);
+  });
+
+  setEventLauncherExpanded(settings().eventLauncherExpanded, { save: false });
+  updateEventLauncherAvailability();
+  return launcher;
+}
+
+function setEventLauncherExpanded(expanded, { save = true } = {}) {
+  const config = settings();
+  config.eventLauncherExpanded = Boolean(expanded);
+  $('#vn-event-launcher').toggleClass('is-expanded', config.eventLauncherExpanded);
+  $('#vn-event-launcher-controls').prop('hidden', !config.eventLauncherExpanded);
+  $('#vn-event-launcher-toggle').attr('aria-expanded', String(config.eventLauncherExpanded));
+  if (save) context.saveSettingsDebounced();
+}
+
+function setEventLauncherAllCards(enabled) {
+  const allCards = Boolean(enabled);
+  $('#vn-event-launcher').toggleClass('is-all-cards', allCards);
+  $('#vn-event-launcher-all').attr('aria-pressed', String(allCards)).toggleClass('selected', allCards);
+  $('#vn-event-launcher-search-wrap').prop('hidden', !allCards);
+  $('#vn-event-launcher-character').closest('.vn-event-launcher-field').prop('hidden', allCards);
+  if (allCards) {
+    const search = $('#vn-event-launcher-search');
+    populateEventLauncherImages(findEventCharacter(search.val())?.name ?? '');
+    search.trigger('focus');
+  } else {
+    populateEventLauncherImages(String($('#vn-event-launcher-character').val() ?? ''));
+  }
+}
+
+function selectedEventLauncherCharacter() {
+  if ($('#vn-event-launcher-all').attr('aria-pressed') === 'true') return findEventCharacter($('#vn-event-launcher-search').val())?.name ?? '';
+  return String($('#vn-event-launcher-character').val() ?? '');
+}
+
+function populateEventLauncherCharacters(scene = getScene()) {
+  if (!ensureEventLauncher()) return;
+  const picker = $('#vn-event-launcher-character');
+  const selected = String(picker.val() ?? '');
+  picker.empty();
+  if (!scene.roster.length) picker.append($('<option>').val('').text('No present characters'));
+  else for (const name of scene.roster) picker.append($('<option>').val(name).text(name));
+  picker.prop('disabled', !scene.roster.length);
+  if (scene.roster.includes(selected)) picker.val(selected);
+  else if (scene.activeSpeaker && scene.roster.includes(scene.activeSpeaker)) picker.val(scene.activeSpeaker);
+  const character = $('#vn-event-launcher-all').attr('aria-pressed') === 'true'
+    ? findEventCharacter($('#vn-event-launcher-search').val())?.name ?? ''
+    : String(picker.val() ?? '');
+  populateEventLauncherImages(character);
+}
+
+async function populateEventLauncherImages(characterName) {
+  const request = ++launcherEventRequest;
+  const picker = $('#vn-event-launcher-image').empty().prop('disabled', true);
+  const show = $('#vn-event-launcher-show').prop('disabled', true);
+  if (!characterName) {
+    picker.append($('<option>').val('').text('Select a character'));
+    return;
+  }
+  picker.append($('<option>').val('').text('Loading…'));
+  try {
+    const events = listEventSprites(await getSprites(characterName));
+    if (request !== launcherEventRequest) return;
+    picker.empty();
+    if (!events.length) {
+      picker.append($('<option>').val('').text('No event images'));
+      return;
+    }
+    for (const sprite of events) {
+      const label = String(sprite.label);
+      picker.append($('<option>').val(label).text(label.replace(/^event_/i, '')));
+    }
+    picker.prop('disabled', false);
+    show.prop('disabled', false);
+  } catch (error) {
+    if (request !== launcherEventRequest) return;
+    console.warn(`[${MODULE_NAME}] Could not list launcher event sprites for ${characterName}.`, error);
+    picker.empty().append($('<option>').val('').text('Could not load events'));
+  }
+}
+
+function updateEventLauncherAvailability() {
+  const launcher = ensureEventLauncher();
+  if (launcher) launcher.hidden = !settings().eventsEnabled;
+}
+
+function removeEventLauncher() {
+  document.getElementById('vn-event-launcher')?.remove();
 }
 
 function selectedEventCharacter() {
@@ -390,6 +531,7 @@ function bindSettings() {
   $('#vn_events_enabled').prop('checked', config.eventsEnabled).on('input', function () {
     config.eventsEnabled = this.checked;
     if (!config.eventsEnabled) closeEventPopup();
+    updateEventLauncherAvailability();
     context.saveSettingsDebounced();
   });
   $('#vn_event_size').val(config.eventSize).on('change', function () {
@@ -518,6 +660,7 @@ async function initialize() {
   const html = await context.renderExtensionTemplateAsync(EXTENSION_FOLDER, 'settings');
   $('#extensions_settings2').append(html);
   bindSettings();
+  ensureEventLauncher();
   populateOutfitPicker();
   registerEventSlashCommand();
   context.eventSource.on(context.eventTypes.CHARACTER_MESSAGE_RENDERED, onCharacterMessage);
@@ -540,22 +683,26 @@ async function initialize() {
     populateCharacterPicker();
     populateEventSearchList();
     populateEventCharacterPicker();
+    populateEventLauncherCharacters();
   });
   await refreshCharacterLibrary();
   populateCharacterPicker();
   populateEventSearchList();
   populateEventCharacterPicker();
+  populateEventLauncherCharacters();
   updateRosterUi();
 }
 
 export function onDisable() {
   clearNpcSprites();
   closeEventPopup();
+  removeEventLauncher();
 }
 
 export function onDelete() {
   removeRenderer();
   removeEventPopup();
+  removeEventLauncher();
 }
 
 jQuery(initialize);

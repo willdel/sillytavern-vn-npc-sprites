@@ -32,7 +32,7 @@ test('physical action adds a character and an exit removes one', () => {
 });
 
 test('explicit dialogue adds and prioritizes the speaker', () => {
-  const result = updateScene({ roster: ['Sadie'], location: null }, analyzeScene('Laura: â€œAre you ready?â€', candidates));
+  const result = updateScene({ roster: ['Sadie'], location: null }, analyzeScene('Laura: “Are you ready?”', candidates));
   assert.deepEqual(result.roster, ['Sadie', 'Laura']);
   assert.equal(result.activeSpeaker, 'Laura');
 });
@@ -44,12 +44,12 @@ test('combined user and narrator text can describe a handoff', () => {
 });
 
 test('internal metadata does not add remote names', () => {
-  const analysis = analyzeScene('Sadie smiles.\n\nðŸŽ¬ INTERNAL STATES\n-Sadie | Circle: Tessa', candidates);
+  const analysis = analyzeScene('Sadie smiles.\n\n🎬 INTERNAL STATES\n-Sadie | Circle: Tessa', candidates);
   assert.deepEqual(analysis.entrances.map(item => item.name), ['Sadie']);
 });
 
 test('a location change resets the previous roster', () => {
-  const text = '[ Time 10:30 | ðŸ“ Location: Pool Courtyard | Sunny ]\nLaura stands by the gate.';
+  const text = '[ Time 10:30 | 📍 Location: Pool Courtyard | Sunny ]\nLaura stands by the gate.';
   assert.equal(extractLocation(text), 'Pool Courtyard');
   const result = updateScene({ roster: ['Sadie'], location: 'Apartment 214' }, analyzeScene(text, candidates));
   assert.deepEqual(result.roster, ['Laura']);

@@ -60,7 +60,7 @@ Investigate whether the outfit expression label is unavailable, mismatched, or s
 
 Automatic background selection may stop changing the background after previously working. Background information also disappears from the extension's test/status output, including both successful mappings and unmatched-location notices.
 
-**Additional observation:** Background selection works in at least one existing chat, but not in a brand-new chat that has no lorebook attached. The new chat does contain a valid structured Location header, and its locations have been added to the extension's mappings. Nevertheless, the background does not change and the status output reports neither a successful match nor **No background mapping**. This suggests background matching is not being reached, its result is being lost, or message routing returns early in this chat contextâ€”not that the Location header itself is absent.
+**Additional observation:** Background selection works in at least one existing chat, but not in a brand-new chat that has no lorebook attached. The new chat does contain a valid structured Location header, and its locations have been added to the extension's mappings. Nevertheless, the background does not change and the status output reports neither a successful match nor **No background mapping**. This suggests background matching is not being reached, its result is being lost, or message routing returns early in this chat context—not that the Location header itself is absent.
 
 Investigate whether Location-header processing is reached on new messages and **Test latest AI message** execution after the outfit-tracking update. Test new chats both with and without a lorebook. Verify that background processing runs independently of character candidates, lorebook availability, and a non-empty scene roster, including when no matching NPC card is found. Check for early returns during sprite rendering and for later status updates that may erase the background result. Also verify that background settings survive extension updates.
 
@@ -68,7 +68,7 @@ Useful evidence for later diagnosis includes the complete Location header, confi
 
 The v0.6.2 fix uses SillyTavern's `getCurrentChatId()` API instead of allowing chats for the same character to share a fallback scene key. It also forcibly restores a chat's saved background when switching chats and reports mappings that were skipped as already selected.
 
-Further testing found that some presets emit `ðŸ“ Apartment - Kitchen` while others emit `ðŸ“ Location: Apartment - Kitchen`. The original parser required the literal word `Location`, causing the first format to silently return no location. Version 0.6.3 supports both formats.
+Further testing found that some presets emit `📍 Apartment - Kitchen` while others emit `📍 Location: Apartment - Kitchen`. The original parser required the literal word `Location`, causing the first format to silently return no location. Version 0.6.3 supports both formats.
 
 ## 5. Persistent outfit state can revert without a clothing change
 

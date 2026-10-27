@@ -11,7 +11,7 @@ test('parses exact location-to-background mappings', () => {
 
 test('matches case, spacing, and dash variants deterministically', () => {
   const mappings = parseBackgroundMappings('Driftline Beach - North Cove Path = north-cove.webp');
-  assert.equal(resolveBackground('  DRIFTLINE   BEACH â€” North Cove Path ', mappings)?.file, 'north-cove.webp');
+  assert.equal(resolveBackground('  DRIFTLINE   BEACH — North Cove Path ', mappings)?.file, 'north-cove.webp');
 });
 
 test('matches a simple room within a changing structured location', () => {
