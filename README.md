@@ -137,6 +137,12 @@ The slash command does not enter the roleplay history or get sent to the model. 
 
 For faster manual use, a collapsible **Event** launcher appears directly above the chat input. It lists only characters in the current scene, loads the selected character's available `event_*` images, and opens the existing popup without adding anything to chat or starting a generation. Use **All cards…** when the desired character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
 
+### Mundi compatibility
+
+When [Mundi](https://github.com/tjalis/Mundi) is open, the same Event launcher automatically moves into Mundi's composer below the scene log and above the message box. Its character list comes from the characters Mundi is visibly rendering, so the popup event system can be used without changing Mundi or relying on this extension's ordinary sprite renderer. Closing Mundi returns the launcher to SillyTavern's normal chat bar.
+
+Automatic `<vn-event character="NPC" image="action">` directives continue to work from generated messages, and the directive is hidden from both SillyTavern's normal chat and Mundi's scene log. If a future Mundi update changes its interface, **All cards…** remains available as a fallback.
+
 Suggested lorebook instruction:
 
 ```text

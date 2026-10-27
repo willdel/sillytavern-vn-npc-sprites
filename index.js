@@ -8,6 +8,7 @@ import { parseBackgroundMappings, resolveBackground } from './modules/background
 import { DEFAULT_OUTFIT_DEFINITIONS, detectOutfits, parseOutfitDefinitions, updateOutfitStates } from './modules/outfit-tracker.js';
 import { listEventSprites, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
 import { closeEventPopup, removeEventPopup, showEventPopup } from './modules/event-popup.js';
+import { resolveMundiCharacterNames } from './modules/mundi-adapter.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
@@ -16,6 +17,11 @@ let context;
 let characterLibrary = [];
 const shownEventDirectives = new Set();
 let launcherEventRequest = 0;
+let mundiBodyObserver = null;
+let mundiRootObserver = null;
+let observedMundiRoot = null;
+let launcherSyncFrame = 0;
+let launcherRosterSignature = '';
 
 async function refreshCharacterLibrary() {
   try {
@@ -143,6 +149,7 @@ function ensureEventLauncher() {
   if (!sendForm) return null;
 
   const launcher = document.createElement('div');
+  launcherRosterSignature = '';
   launcher.id = 'vn-event-launcher';
   launcher.innerHTML = `
     <button id="vn-event-launcher-toggle" class="menu_button" type="button" aria-expanded="false" title="Open the VN event image launcher">
@@ -190,6 +197,101 @@ function ensureEventLauncher() {
   return launcher;
 }
 
+function mundiComposer() {
+  const root = document.getElementById('mundi-root');
+  if (!root || root.hidden || !document.body.classList.contains('mundi-open')) return null;
+  return root.querySelector('.mu-scene .mu-composer');
+}
+
+function currentContextCharacter() {
+  if (context.groupId != null) return null;
+  return context.characters?.[context.characterId] ?? characterLibrary.find(character => String(character?.avatar) === String(context.characterId)) ?? null;
+}
+
+function getMundiPresentCharacterNames() {
+  const root = document.getElementById('mundi-root');
+  if (!root) return [];
+  return resolveMundiCharacterNames({
+    avatarIds: [...root.querySelectorAll('.mu-scene .mu-sprite[data-who]')].map(element => element.dataset.who),
+    visibleNames: [...root.querySelectorAll('.mu-people .mu-person b')].map(element => element.textContent),
+    characters: characterLibrary,
+    currentCharacter: currentContextCharacter(),
+  });
+}
+
+function launcherRoster(scene = getScene()) {
+  return document.getElementById('vn-event-launcher')?.classList.contains('is-mundi')
+    ? getMundiPresentCharacterNames()
+    : scene.roster;
+}
+
+function placeLauncherInNativeChat(launcher) {
+  const sendForm = document.getElementById('send_form');
+  if (!sendForm) return;
+  const inputRow = sendForm.querySelector('#nonQRFormItems');
+  if (inputRow) inputRow.insertAdjacentElement('beforebegin', launcher);
+  else sendForm.prepend(launcher);
+}
+
+function hideMundiEventDirectives() {
+  document.querySelectorAll('#mundi-root .mu-line-text').forEach(element => {
+    element.querySelectorAll('vn-event').forEach(node => node.remove());
+    const cleaned = element.innerHTML
+      .replace(/&lt;vn-event\b.*?&gt;/giu, '')
+      .replace(/<vn-event\b[^>]*>/giu, '');
+    if (cleaned !== element.innerHTML) element.innerHTML = cleaned;
+  });
+}
+
+function syncEventLauncherHost() {
+  const launcher = ensureEventLauncher();
+  if (!launcher) return;
+  const composer = mundiComposer();
+  if (composer) {
+    launcher.classList.add('is-mundi');
+    if (launcher.parentElement !== composer || composer.firstElementChild !== launcher) composer.prepend(launcher);
+  } else {
+    launcher.classList.remove('is-mundi');
+    if (launcher.parentElement?.id !== 'send_form') placeLauncherInNativeChat(launcher);
+  }
+  hideMundiEventDirectives();
+  populateEventLauncherCharacters();
+}
+
+function scheduleEventLauncherSync() {
+  if (launcherSyncFrame) return;
+  launcherSyncFrame = requestAnimationFrame(() => {
+    launcherSyncFrame = 0;
+    const root = document.getElementById('mundi-root');
+    if (root !== observedMundiRoot) {
+      mundiRootObserver?.disconnect();
+      observedMundiRoot = root;
+      if (root) {
+        mundiRootObserver = new MutationObserver(scheduleEventLauncherSync);
+        mundiRootObserver.observe(root, { attributes: true, childList: true, subtree: true, attributeFilter: ['hidden', 'class'] });
+      }
+    }
+    syncEventLauncherHost();
+  });
+}
+
+function observeMundi() {
+  mundiBodyObserver?.disconnect();
+  mundiBodyObserver = new MutationObserver(scheduleEventLauncherSync);
+  mundiBodyObserver.observe(document.body, { attributes: true, childList: true, attributeFilter: ['class'] });
+  scheduleEventLauncherSync();
+}
+
+function stopObservingMundi() {
+  mundiBodyObserver?.disconnect();
+  mundiRootObserver?.disconnect();
+  mundiBodyObserver = null;
+  mundiRootObserver = null;
+  observedMundiRoot = null;
+  if (launcherSyncFrame) cancelAnimationFrame(launcherSyncFrame);
+  launcherSyncFrame = 0;
+}
+
 function setEventLauncherExpanded(expanded, { save = true } = {}) {
   const config = settings();
   config.eventLauncherExpanded = Boolean(expanded);
@@ -221,14 +323,18 @@ function selectedEventLauncherCharacter() {
 
 function populateEventLauncherCharacters(scene = getScene()) {
   if (!ensureEventLauncher()) return;
+  const roster = launcherRoster(scene);
+  const signature = `${document.getElementById('vn-event-launcher')?.classList.contains('is-mundi')}:${roster.join('\u0000')}:${scene.activeSpeaker ?? ''}`;
+  if (signature === launcherRosterSignature) return;
+  launcherRosterSignature = signature;
   const picker = $('#vn-event-launcher-character');
   const selected = String(picker.val() ?? '');
   picker.empty();
-  if (!scene.roster.length) picker.append($('<option>').val('').text('No present characters'));
-  else for (const name of scene.roster) picker.append($('<option>').val(name).text(name));
-  picker.prop('disabled', !scene.roster.length);
-  if (scene.roster.includes(selected)) picker.val(selected);
-  else if (scene.activeSpeaker && scene.roster.includes(scene.activeSpeaker)) picker.val(scene.activeSpeaker);
+  if (!roster.length) picker.append($('<option>').val('').text('No present characters'));
+  else for (const name of roster) picker.append($('<option>').val(name).text(name));
+  picker.prop('disabled', !roster.length);
+  if (roster.includes(selected)) picker.val(selected);
+  else if (scene.activeSpeaker && roster.includes(scene.activeSpeaker)) picker.val(scene.activeSpeaker);
   const character = $('#vn-event-launcher-all').attr('aria-pressed') === 'true'
     ? findEventCharacter($('#vn-event-launcher-search').val())?.name ?? ''
     : String(picker.val() ?? '');
@@ -271,6 +377,7 @@ function updateEventLauncherAvailability() {
 }
 
 function removeEventLauncher() {
+  launcherRosterSignature = '';
   document.getElementById('vn-event-launcher')?.remove();
 }
 
@@ -309,6 +416,7 @@ function hideRenderedEventDirectives(messageId) {
       .replace(/&lt;vn-event\b.*?&gt;/giu, '')
       .replace(/<vn-event\b[^>]*>/giu, '');
   });
+  hideMundiEventDirectives();
 }
 
 async function processEventDirectives(messageId, text, { force = false } = {}) {
@@ -661,6 +769,7 @@ async function initialize() {
   $('#extensions_settings2').append(html);
   bindSettings();
   ensureEventLauncher();
+  observeMundi();
   populateOutfitPicker();
   registerEventSlashCommand();
   context.eventSource.on(context.eventTypes.CHARACTER_MESSAGE_RENDERED, onCharacterMessage);
@@ -694,12 +803,14 @@ async function initialize() {
 }
 
 export function onDisable() {
+  stopObservingMundi();
   clearNpcSprites();
   closeEventPopup();
   removeEventLauncher();
 }
 
 export function onDelete() {
+  stopObservingMundi();
   removeRenderer();
   removeEventPopup();
   removeEventLauncher();
