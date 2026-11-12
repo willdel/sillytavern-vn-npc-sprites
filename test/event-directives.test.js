@@ -1,11 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eventSpriteLabel, listEventSprites, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
+import { eventSpriteLabel, eventVideoFilename, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPath, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
 
 test('parses quoted event attributes', () => {
   assert.deepEqual(parseEventDirectives('Story.\n<vn-event character="Elle" image="special_dance">'), [{
     character: 'Elle', image: 'special_dance', raw: '<vn-event character="Elle" image="special_dance">', index: 7,
   }]);
+});
+
+test('builds safe direct paths for MP4 event videos', () => {
+  assert.equal(isEventVideoRequest('special_dance.mp4'), true);
+  assert.equal(eventVideoFilename('special_dance.mp4'), 'event_special_dance.mp4');
+  assert.equal(eventVideoFilename('../special_dance.mp4'), 'event_special_dance.mp4');
+  assert.equal(eventVideoFilename('bad.exe'), '');
+  assert.equal(eventVideoPath('Elle Smith', 'event_special_dance.mp4'), '/characters/Elle%20Smith/event_special_dance.mp4');
+});
+
+test('derives a matching MP4 path from a discoverable poster sprite', () => {
+  assert.equal(matchingVideoPath('/characters/Elle/event_dance.webp?t=123'), '/characters/Elle/event_dance.mp4');
 });
 
 test('strips event directives without changing stored prose', () => {

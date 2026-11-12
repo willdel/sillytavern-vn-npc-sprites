@@ -1,6 +1,7 @@
 let popup;
 let titleElement;
 let imageElement;
+let videoElement;
 let moveCallback;
 let configuredSize = 650;
 
@@ -30,17 +31,19 @@ function ensurePopup() {
   popup.id = 'vn-event-popup';
   popup.hidden = true;
   popup.innerHTML = `
-    <div class="vn-event-handle" title="Drag event image. Double-click to reset position.">
+    <div class="vn-event-handle" title="Drag event media. Double-click to reset position.">
       <span class="vn-event-grip">&#10247;</span>
       <span class="vn-event-title"></span>
-      <button class="vn-event-reset" type="button" title="Reset position" aria-label="Reset event image position">&#8634;</button>
-      <button class="vn-event-close" type="button" title="Close" aria-label="Close event image">&times;</button>
+      <button class="vn-event-reset" type="button" title="Reset position" aria-label="Reset event media position">&#8634;</button>
+      <button class="vn-event-close" type="button" title="Close" aria-label="Close event media">&times;</button>
     </div>
-    <img class="vn-event-image" alt="VN event image">
+    <img class="vn-event-media vn-event-image" alt="VN event image">
+    <video class="vn-event-media vn-event-video" muted loop playsinline preload="auto" hidden></video>
   `;
   document.body.append(popup);
   titleElement = popup.querySelector('.vn-event-title');
   imageElement = popup.querySelector('.vn-event-image');
+  videoElement = popup.querySelector('.vn-event-video');
   const handle = popup.querySelector('.vn-event-handle');
   handle.addEventListener('pointerdown', event => {
     if (event.target.closest('button')) return;
@@ -71,24 +74,43 @@ function ensurePopup() {
   return popup;
 }
 
-export function showEventPopup({ path, title = '', size = 650, position = null, onMove = null }) {
+function clearMedia() {
+  imageElement?.removeAttribute('src');
+  if (videoElement) {
+    videoElement.pause();
+    videoElement.removeAttribute('src');
+    videoElement.load();
+  }
+}
+
+export function showEventPopup({ path, title = '', type = 'image', size = 650, position = null, onMove = null }) {
   ensurePopup();
+  clearMedia();
   configuredSize = size;
   moveCallback = onMove;
   const actualSize = fittedSize(size);
   popup.style.width = `${actualSize}px`;
   popup.style.height = `${actualSize}px`;
   titleElement.textContent = title;
-  imageElement.src = path;
-  imageElement.alt = title || 'VN event image';
+  const video = type === 'video';
+  imageElement.hidden = video;
+  videoElement.hidden = !video;
+  if (video) {
+    videoElement.src = path;
+    videoElement.load();
+  } else {
+    imageElement.src = path;
+    imageElement.alt = title || 'VN event image';
+  }
   popup.hidden = false;
   place(position, actualSize);
+  if (video) void videoElement.play().catch(error => console.warn('[vn_npc_sprites] Event video autoplay failed.', error));
 }
 
 export function closeEventPopup() {
   if (!popup) return;
   popup.hidden = true;
-  imageElement?.removeAttribute('src');
+  clearMedia();
 }
 
 export function resetEventPopupPosition() {
@@ -103,5 +125,6 @@ export function removeEventPopup() {
   popup = null;
   titleElement = null;
   imageElement = null;
+  videoElement = null;
 }
 

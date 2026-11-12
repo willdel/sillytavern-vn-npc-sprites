@@ -25,6 +25,28 @@ export function eventSpriteLabel(image = '') {
   return label.startsWith('event_') ? label : `event_${label}`;
 }
 
+export function isEventVideoRequest(image = '') {
+  return /\.mp4$/iu.test(String(image).trim());
+}
+
+export function eventVideoFilename(image = '') {
+  const basename = String(image).trim().replaceAll('\\', '/').split('/').at(-1) ?? '';
+  if (!/^[\p{L}\p{N}_. -]+\.mp4$/iu.test(basename)) return '';
+  return eventSpriteLabel(basename);
+}
+
+export function eventVideoPath(characterName, image) {
+  const filename = eventVideoFilename(image);
+  const character = String(characterName ?? '').trim();
+  if (!character || !filename) return '';
+  return `/characters/${encodeURIComponent(character)}/${encodeURIComponent(filename)}`;
+}
+
+export function matchingVideoPath(spritePath = '') {
+  const clean = String(spritePath).split('?')[0];
+  return /\.[a-z0-9]+$/iu.test(clean) ? clean.replace(/\.[a-z0-9]+$/iu, '.mp4') : '';
+}
+
 export function listEventSprites(sprites = []) {
   return sprites.filter(sprite => String(sprite?.label ?? '').toLocaleLowerCase().startsWith('event_'));
 }
