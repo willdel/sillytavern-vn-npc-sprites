@@ -119,16 +119,16 @@ event_movie_night.webp
 
 Transparent PNG and WebP images remain transparent. The popup defaults to 650 × 650 pixels near the upper-right, preserves image aspect ratio, and can be dragged by its small header. Close it with the header's **×** icon or the keyboard's **Esc** key. The reset icon or a double-click on the handle returns it to the default position. Position and configured size are remembered.
 
-MP4 event videos are also supported. They autoplay muted, loop continuously, preserve their aspect ratio, and stop when another event replaces them or the popup closes. H.264 MP4 is recommended for broad browser support.
+WebM and MP4 event videos are also supported. They autoplay muted, loop continuously, preserve their aspect ratio, and stop when another event replaces them or the popup closes. VP9 WebM with an alpha channel is recommended for transparent video in Chrome, Edge, and Firefox; H.264 MP4 is the broad opaque-video fallback.
 
-SillyTavern's sprite inventory lists images only, so there are two ways to use an MP4:
+SillyTavern's sprite inventory lists images only, so there are two ways to use a video:
 
-- **Direct trigger:** put `event_special_dance.mp4` in the character's Expressions folder and use `image="special_dance.mp4"` in the directive or slash command.
-- **Dropdown entry:** put both `event_special_dance.webp` and `event_special_dance.mp4` in the folder. The WebP acts as the discoverable poster; choosing `special_dance` automatically plays the matching MP4 instead. If the MP4 is absent, the poster image is shown normally.
+- **Direct trigger:** put `event_special_dance.webm` or `event_special_dance.mp4` in the character's Expressions folder and include the extension in the directive or slash command.
+- **Dropdown entry:** put a discoverable poster such as `event_special_dance.webp` beside the same-named video. Choosing `special_dance` automatically plays `event_special_dance.webm`, then falls back to `event_special_dance.mp4`, then to the poster image.
 
 ```text
-<vn-event character="Elle" image="special_dance.mp4">
-/vn-event character="Elle" image="special_dance.mp4"
+<vn-event character="Elle" image="special_dance.webm">
+/vn-event character="Elle" image="special_dance.webm"
 ```
 
 An AI response or lorebook instruction can trigger an event with:

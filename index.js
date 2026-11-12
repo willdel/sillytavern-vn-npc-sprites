@@ -6,7 +6,7 @@ import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDe
 import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
 import { parseBackgroundMappings, resolveBackground } from './modules/background-tracker.js';
 import { DEFAULT_OUTFIT_DEFINITIONS, detectOutfits, parseOutfitDefinitions, updateOutfitStates } from './modules/outfit-tracker.js';
-import { eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPath, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
+import { eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
 import { closeEventPopup, removeEventPopup, showEventPopup } from './modules/event-popup.js';
 import { resolveMundiCharacterNames } from './modules/mundi-adapter.js';
 
@@ -394,15 +394,15 @@ async function displayEvent(characterValue, imageValue) {
   if (isEventVideoRequest(imageValue)) {
     const videoPath = eventVideoPath(character.name, imageValue);
     if (!videoPath || !await eventVideoExists(videoPath)) return { ok: false, message: `No event video found for ${character.name}: ${imageValue}.` };
-    showEventMedia(videoPath, `${character.name} - ${String(imageValue).replace(/^event_/i, '').replace(/\.mp4$/i, '')}`, 'video');
+    showEventMedia(videoPath, `${character.name} - ${String(imageValue).replace(/^event_/i, '').replace(/\.(?:mp4|webm)$/i, '')}`, 'video');
     return { ok: true, message: `Playing event video ${String(imageValue).replace(/^event_/i, '')} for ${character.name}.` };
   }
   const sprite = resolveEventSprite(await getSprites(character.name), imageValue);
   if (!sprite?.path) return { ok: false, message: `No event sprite found for ${character.name}: event_${String(imageValue).replace(/^event_/i, '')}.` };
-  const matchingVideo = matchingVideoPath(sprite.path);
-  if (matchingVideo && await eventVideoExists(matchingVideo)) {
+  const matchingVideo = await firstExistingEventVideo(matchingVideoPaths(sprite.path));
+  if (matchingVideo) {
     showEventMedia(matchingVideo, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'video');
-    return { ok: true, message: `Playing matching event video for ${character.name}: ${sprite.label}.mp4.` };
+    return { ok: true, message: `Playing matching event video for ${character.name}: ${matchingVideo.split('/').at(-1)}.` };
   }
   showEventMedia(sprite.path, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'image');
   return { ok: true, message: `Showing event image ${sprite.label} for ${character.name}.` };
@@ -415,6 +415,11 @@ async function eventVideoExists(path) {
   } catch {
     return false;
   }
+}
+
+async function firstExistingEventVideo(paths) {
+  for (const path of paths) if (await eventVideoExists(path)) return path;
+  return '';
 }
 
 function showEventMedia(path, title, type) {
@@ -778,12 +783,12 @@ function registerEventSlashCommand() {
       }),
       context.SlashCommandNamedArgument.fromProps({
         name: 'image',
-        description: 'Event label or MP4 filename, with or without the event_ prefix.',
+        description: 'Event label, MP4 filename, or WebM filename, with or without the event_ prefix.',
         typeList: [context.ARGUMENT_TYPE.STRING],
         isRequired: true,
       }),
     ],
-    helpString: 'Shows draggable VN event media. Example: /vn-event character="Elle" image="special_dance" or image="special_dance.mp4"',
+    helpString: 'Shows draggable VN event media. Example: /vn-event character="Elle" image="special_dance" or image="special_dance.webm"',
     returns: 'Event display status.',
   }));
 }

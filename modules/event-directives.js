@@ -26,12 +26,12 @@ export function eventSpriteLabel(image = '') {
 }
 
 export function isEventVideoRequest(image = '') {
-  return /\.mp4$/iu.test(String(image).trim());
+  return /\.(?:mp4|webm)$/iu.test(String(image).trim());
 }
 
 export function eventVideoFilename(image = '') {
   const basename = String(image).trim().replaceAll('\\', '/').split('/').at(-1) ?? '';
-  if (!/^[\p{L}\p{N}_. -]+\.mp4$/iu.test(basename)) return '';
+  if (!/^[\p{L}\p{N}_. -]+\.(?:mp4|webm)$/iu.test(basename)) return '';
   return eventSpriteLabel(basename);
 }
 
@@ -42,9 +42,11 @@ export function eventVideoPath(characterName, image) {
   return `/characters/${encodeURIComponent(character)}/${encodeURIComponent(filename)}`;
 }
 
-export function matchingVideoPath(spritePath = '') {
+export function matchingVideoPaths(spritePath = '') {
   const clean = String(spritePath).split('?')[0];
-  return /\.[a-z0-9]+$/iu.test(clean) ? clean.replace(/\.[a-z0-9]+$/iu, '.mp4') : '';
+  return /\.[a-z0-9]+$/iu.test(clean)
+    ? ['.webm', '.mp4'].map(extension => clean.replace(/\.[a-z0-9]+$/iu, extension))
+    : [];
 }
 
 export function listEventSprites(sprites = []) {

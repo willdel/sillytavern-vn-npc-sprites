@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eventSpriteLabel, eventVideoFilename, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPath, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
+import { eventSpriteLabel, eventVideoFilename, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
 
 test('parses quoted event attributes', () => {
   assert.deepEqual(parseEventDirectives('Story.\n<vn-event character="Elle" image="special_dance">'), [{
@@ -8,16 +8,22 @@ test('parses quoted event attributes', () => {
   }]);
 });
 
-test('builds safe direct paths for MP4 event videos', () => {
+test('builds safe direct paths for MP4 and WebM event videos', () => {
   assert.equal(isEventVideoRequest('special_dance.mp4'), true);
+  assert.equal(isEventVideoRequest('special_dance.webm'), true);
   assert.equal(eventVideoFilename('special_dance.mp4'), 'event_special_dance.mp4');
+  assert.equal(eventVideoFilename('special_dance.webm'), 'event_special_dance.webm');
   assert.equal(eventVideoFilename('../special_dance.mp4'), 'event_special_dance.mp4');
   assert.equal(eventVideoFilename('bad.exe'), '');
   assert.equal(eventVideoPath('Elle Smith', 'event_special_dance.mp4'), '/characters/Elle%20Smith/event_special_dance.mp4');
+  assert.equal(eventVideoPath('Elle Smith', 'special_dance.webm'), '/characters/Elle%20Smith/event_special_dance.webm');
 });
 
-test('derives a matching MP4 path from a discoverable poster sprite', () => {
-  assert.equal(matchingVideoPath('/characters/Elle/event_dance.webp?t=123'), '/characters/Elle/event_dance.mp4');
+test('derives matching WebM and MP4 paths from a discoverable poster sprite', () => {
+  assert.deepEqual(matchingVideoPaths('/characters/Elle/event_dance.webp?t=123'), [
+    '/characters/Elle/event_dance.webm',
+    '/characters/Elle/event_dance.mp4',
+  ]);
 });
 
 test('strips event directives without changing stored prose', () => {
