@@ -153,7 +153,9 @@ Manual alternatives:
 
 The optional slash-command `slot` is `right` by default. The command does not enter the roleplay history or get sent to the model. The extension settings also provide a scene-character dropdown, a searchable all-card field, an event-image dropdown, **Show right**, **Show left**, **Close both**, and **Replay latest directive** controls. Automatic directives can resolve any character card or configured alias even when that character is not in the scene dropdown.
 
-For faster manual use, a collapsible **Event** launcher appears directly above the chat input. It lists only characters in the current scene, loads the selected character's available `event_*` images, and offers **Show right** and **Show left** without adding anything to chat or starting a generation. Showing new media replaces only the selected side. Use **All cards…** when the desired character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
+For faster manual use, a collapsible **Scene** menu appears directly above the chat input. Its event controls list characters in the current scene, load the selected character's available `event_*` images, and offer **Show right** and **Show left** without adding anything to chat or starting a generation. Showing new media replaces only the selected side. Use **All cards…** when the desired event character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
+
+The same Scene menu provides a manual outfit correction. Its character picker is intentionally limited to the current scene roster, and its outfit picker uses the categories configured in extension settings. **Set outfit** immediately updates that character's persistent outfit state and rerenders their sprite. Default-outfit selection and outfit-category definitions remain in extension settings.
 
 ### Mundi compatibility
 

@@ -155,27 +155,37 @@ function ensureEventLauncher() {
   launcherRosterSignature = '';
   launcher.id = 'vn-event-launcher';
   launcher.innerHTML = `
-    <button id="vn-event-launcher-toggle" class="menu_button" type="button" aria-expanded="false" title="Open the VN event image launcher">
-      <i class="fa-solid fa-clapperboard" aria-hidden="true"></i>
-      <span>Event</span>
+    <button id="vn-event-launcher-toggle" class="menu_button" type="button" aria-expanded="false" title="Open VN scene controls">
+      <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+      <span>Scene</span>
       <i class="vn-event-launcher-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
     </button>
     <div id="vn-event-launcher-controls" hidden>
-      <label class="vn-event-launcher-field">
+      <label class="vn-event-launcher-field vn-event-only">
         <span>Character</span>
         <select id="vn-event-launcher-character" class="text_pole" aria-label="Present character"></select>
       </label>
-      <button id="vn-event-launcher-all" class="menu_button" type="button" aria-pressed="false" title="Choose from all character cards">All cards…</button>
-      <label id="vn-event-launcher-search-wrap" class="vn-event-launcher-field" hidden>
+      <button id="vn-event-launcher-all" class="menu_button vn-event-only" type="button" aria-pressed="false" title="Choose from all character cards">All cards…</button>
+      <label id="vn-event-launcher-search-wrap" class="vn-event-launcher-field vn-event-only" hidden>
         <span>All cards</span>
         <input id="vn-event-launcher-search" class="text_pole" type="text" list="vn_event_character_list" placeholder="Exact character name" aria-label="Search all character cards">
       </label>
-      <label class="vn-event-launcher-field">
+      <label class="vn-event-launcher-field vn-event-only">
         <span>Event</span>
         <select id="vn-event-launcher-image" class="text_pole" aria-label="Event image"></select>
       </label>
-      <button id="vn-event-launcher-show-right" class="menu_button" type="button" disabled>Show right</button>
-      <button id="vn-event-launcher-show-left" class="menu_button" type="button" disabled>Show left</button>
+      <button id="vn-event-launcher-show-right" class="menu_button vn-event-only" type="button" disabled>Show right</button>
+      <button id="vn-event-launcher-show-left" class="menu_button vn-event-only" type="button" disabled>Show left</button>
+      <span class="vn-launcher-divider vn-outfit-only" aria-hidden="true"></span>
+      <label class="vn-event-launcher-field vn-outfit-only">
+        <span>Outfit character</span>
+        <select id="vn-outfit-launcher-character" class="text_pole" aria-label="Present character for outfit correction"></select>
+      </label>
+      <label class="vn-event-launcher-field vn-outfit-only">
+        <span>Current outfit</span>
+        <select id="vn-outfit-launcher-outfit" class="text_pole" aria-label="Current outfit"></select>
+      </label>
+      <button id="vn-outfit-launcher-apply" class="menu_button vn-outfit-only" type="button" disabled>Set outfit</button>
     </div>
   `;
   const inputRow = sendForm.querySelector('#nonQRFormItems');
@@ -195,6 +205,8 @@ function ensureEventLauncher() {
     const result = await displayEvent(selectedEventLauncherCharacter(), String($('#vn-event-launcher-image').val() ?? ''), slot);
     setStatus(result.message);
   });
+  $('#vn-outfit-launcher-character').on('change', syncOutfitLauncherSelection);
+  $('#vn-outfit-launcher-apply').on('click', applyOutfitLauncherCorrection);
 
   setEventLauncherExpanded(settings().eventLauncherExpanded, { save: false });
   updateEventLauncherAvailability();
@@ -328,7 +340,8 @@ function selectedEventLauncherCharacter() {
 function populateEventLauncherCharacters(scene = getScene()) {
   if (!ensureEventLauncher()) return;
   const roster = launcherRoster(scene);
-  const signature = `${document.getElementById('vn-event-launcher')?.classList.contains('is-mundi')}:${roster.join('\u0000')}:${scene.activeSpeaker ?? ''}`;
+  const outfitSignature = roster.map(name => `${name}=${scene.outfitStates?.[name] ?? settings().defaultOutfit}`).join('\u0000');
+  const signature = `${document.getElementById('vn-event-launcher')?.classList.contains('is-mundi')}:${roster.join('\u0000')}:${scene.activeSpeaker ?? ''}:${outfitSignature}:${outfitLabels().join('\u0000')}`;
   if (signature === launcherRosterSignature) return;
   launcherRosterSignature = signature;
   const picker = $('#vn-event-launcher-character');
@@ -343,6 +356,49 @@ function populateEventLauncherCharacters(scene = getScene()) {
     ? findEventCharacter($('#vn-event-launcher-search').val())?.name ?? ''
     : String(picker.val() ?? '');
   populateEventLauncherImages(character);
+  populateOutfitLauncher(scene, roster);
+}
+
+function outfitLabels() {
+  const config = settings();
+  return [...new Set([config.defaultOutfit, ...parseOutfitDefinitions(config.outfitDefinitions).map(item => item.label)])];
+}
+
+function populateOutfitLauncher(scene = getScene(), roster = launcherRoster(scene)) {
+  const characterPicker = $('#vn-outfit-launcher-character');
+  const selected = String(characterPicker.val() ?? '');
+  characterPicker.empty();
+  if (!roster.length) characterPicker.append($('<option>').val('').text('No present characters'));
+  else for (const name of roster) characterPicker.append($('<option>').val(name).text(name));
+  characterPicker.prop('disabled', !roster.length);
+  if (roster.includes(selected)) characterPicker.val(selected);
+  else if (scene.activeSpeaker && roster.includes(scene.activeSpeaker)) characterPicker.val(scene.activeSpeaker);
+  syncOutfitLauncherSelection();
+}
+
+function syncOutfitLauncherSelection() {
+  const config = settings();
+  const scene = getScene();
+  const character = String($('#vn-outfit-launcher-character').val() ?? '');
+  const picker = $('#vn-outfit-launcher-outfit').empty();
+  for (const label of outfitLabels()) picker.append($('<option>').val(label).text(label));
+  picker.val(scene.outfitStates?.[character] ?? config.defaultOutfit);
+  picker.prop('disabled', !character);
+  $('#vn-outfit-launcher-apply').prop('disabled', !character);
+}
+
+async function applyOutfitLauncherCorrection() {
+  const config = settings();
+  const scene = getScene();
+  const character = String($('#vn-outfit-launcher-character').val() ?? '');
+  const roster = launcherRoster(scene);
+  if (!character || !roster.includes(character)) return setStatus('Choose a character currently in the scene.');
+  const outfit = String($('#vn-outfit-launcher-outfit').val() ?? config.defaultOutfit);
+  scene.outfitStates ??= {};
+  scene.outfitStates[character] = outfit;
+  saveScene(scene);
+  await renderScene(scene, buildCandidates(characterLibrary, config.aliases));
+  setStatus(`Set ${character}'s current outfit to ${outfit}.`);
 }
 
 async function populateEventLauncherImages(characterName) {
@@ -377,7 +433,11 @@ async function populateEventLauncherImages(characterName) {
 
 function updateEventLauncherAvailability() {
   const launcher = ensureEventLauncher();
-  if (launcher) launcher.hidden = !settings().eventsEnabled;
+  if (!launcher) return;
+  const config = settings();
+  launcher.hidden = !config.eventsEnabled && !config.outfitsEnabled;
+  $('#vn-event-launcher .vn-event-only').prop('hidden', !config.eventsEnabled);
+  $('#vn-event-launcher .vn-outfit-only').prop('hidden', !config.outfitsEnabled);
 }
 
 function removeEventLauncher() {
@@ -657,6 +717,7 @@ function bindSettings() {
   });
   $('#vn_npc_outfits_enabled').prop('checked', config.outfitsEnabled).on('input', function () {
     config.outfitsEnabled = this.checked;
+    updateEventLauncherAvailability();
     context.saveSettingsDebounced();
   });
   $('#vn_npc_default_outfit').val(config.defaultOutfit).on('input', function () {
@@ -770,10 +831,10 @@ function bindSettings() {
 }
 
 function populateOutfitPicker() {
-  const config = settings();
-  const labels = [...new Set([config.defaultOutfit, ...parseOutfitDefinitions(config.outfitDefinitions).map(item => item.label)])];
   const picker = $('#vn_npc_outfit').empty();
-  for (const label of labels) picker.append($('<option>').val(label).text(label));
+  for (const label of outfitLabels()) picker.append($('<option>').val(label).text(label));
+  launcherRosterSignature = '';
+  populateEventLauncherCharacters();
 }
 
 function registerEventSlashCommand() {
