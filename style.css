@@ -68,6 +68,7 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 #vn-event-launcher-controls[hidden], #vn-event-launcher-search-wrap[hidden], #vn-event-launcher [hidden] { display: none !important; }
 #vn-event-launcher .vn-event-launcher-field { display: grid; flex: 1 1 11rem; gap: 0.1rem; min-width: 7rem; margin: 0; }
 #vn-event-launcher .vn-event-launcher-field > span { overflow: hidden; font-size: 0.72em; line-height: 1; opacity: 0.72; text-overflow: ellipsis; }
+#vn-event-launcher .vn-launcher-section-title { display: block; margin: 0.15rem 0 0; font-size: 0.82em; line-height: 1.2; opacity: 0.9; }
 #vn-event-launcher .text_pole, #vn-event-launcher .menu_button { min-height: 30px; margin: 0; }
 #vn-event-launcher-all { flex: 0 0 auto; }
 #vn-event-launcher-all.selected { box-shadow: inset 0 0 0 1px var(--SmartThemeQuoteColor); }
@@ -121,6 +122,10 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   width: 100%;
   min-height: 1px;
   height: 1px;
+}
+
+#mundi-root #vn-event-launcher.is-mundi .vn-outfit-only:not([hidden]) {
+  visibility: visible;
 }
 
 @media (max-width: 700px) {

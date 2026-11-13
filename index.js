@@ -168,6 +168,17 @@ function ensureEventLauncher() {
       <i class="vn-event-launcher-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
     </button>
     <div id="vn-event-launcher-controls" hidden>
+      <strong class="vn-launcher-section-title vn-outfit-only">Clothing</strong>
+      <label class="vn-event-launcher-field vn-outfit-only">
+        <span>Character</span>
+        <select id="vn-outfit-launcher-character" class="text_pole" aria-label="Present character for outfit correction"></select>
+      </label>
+      <label class="vn-event-launcher-field vn-outfit-only">
+        <span>Outfit</span>
+        <select id="vn-outfit-launcher-outfit" class="text_pole" aria-label="Current outfit"></select>
+      </label>
+      <button id="vn-outfit-launcher-apply" class="menu_button vn-outfit-only" type="button" disabled>Set outfit</button>
+      <span class="vn-launcher-divider vn-outfit-only" aria-hidden="true"></span>
       <label class="vn-event-launcher-field vn-event-only">
         <span>Character</span>
         <select id="vn-event-launcher-character" class="text_pole" aria-label="Present character"></select>
@@ -200,16 +211,6 @@ function ensureEventLauncher() {
         </select>
       </label>
       <button id="vn-interaction-launcher-send" class="menu_button vn-interaction-only" type="button" disabled>Send + Show</button>
-      <span class="vn-launcher-divider vn-outfit-only" aria-hidden="true"></span>
-      <label class="vn-event-launcher-field vn-outfit-only">
-        <span>Outfit character</span>
-        <select id="vn-outfit-launcher-character" class="text_pole" aria-label="Present character for outfit correction"></select>
-      </label>
-      <label class="vn-event-launcher-field vn-outfit-only">
-        <span>Current outfit</span>
-        <select id="vn-outfit-launcher-outfit" class="text_pole" aria-label="Current outfit"></select>
-      </label>
-      <button id="vn-outfit-launcher-apply" class="menu_button vn-outfit-only" type="button" disabled>Set outfit</button>
     </div>
   `;
   const inputRow = sendForm.querySelector('#nonQRFormItems');
@@ -620,7 +621,9 @@ function updateEventLauncherAvailability() {
   launcher.hidden = !config.eventsEnabled && !config.outfitsEnabled && !mundi;
   $('#vn-event-launcher .vn-event-only').prop('hidden', !config.eventsEnabled);
   $('#vn-event-launcher .vn-interaction-only').prop('hidden', !config.eventsEnabled);
-  $('#vn-event-launcher .vn-outfit-only').prop('hidden', !config.outfitsEnabled && !mundi);
+  $('#vn-event-launcher .vn-outfit-only').each(function () {
+    this.hidden = !config.outfitsEnabled && !mundi;
+  });
 }
 
 function removeEventLauncher() {
