@@ -68,6 +68,9 @@
         <button id="vn_event_replay" class="menu_button" type="button">Replay latest directive</button>
       </div>
       <small>Automatic format: &lt;vn-event character="Elle" image="special_dance" slot="left"&gt;. Omit slot for the right side. Manual command: /vn-event character="Elle" image="special_dance" slot="left".</small>
+      <label for="vn_interaction_definitions">Manual interactions (label | event media | message containing {character})</label>
+      <textarea id="vn_interaction_definitions" class="text_pole" rows="6" placeholder="Hug | hug | I hug {character}."></textarea>
+      <small>These appear in the Scene menu below chat. Send + Show immediately sends the configured message to the LLM and opens the selected character's matching event media.</small>
       <div class="vn-npc-actions">
         <button id="vn_npc_test" class="menu_button" type="button">Test latest AI message</button>
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>

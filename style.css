@@ -73,6 +73,8 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 #vn-event-launcher-show-right,
 #vn-event-launcher-show-left { flex: 0 0 auto; }
 #vn-outfit-launcher-apply { flex: 0 0 auto; }
+#vn-interaction-launcher-send { flex: 0 0 auto; }
+#vn-event-launcher .vn-interaction-slot { flex: 0 1 6rem; min-width: 5rem; }
 #vn-event-launcher .vn-launcher-divider { align-self: stretch; width: 1px; min-height: 30px; background: var(--SmartThemeBorderColor); }
 
 #mundi-root #vn-event-launcher.is-mundi {

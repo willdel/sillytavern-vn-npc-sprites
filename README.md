@@ -157,9 +157,23 @@ For faster manual use, a collapsible **Scene** menu appears directly above the c
 
 The same Scene menu provides a manual outfit correction. Its character picker is intentionally limited to the current scene roster, and its outfit picker uses the categories configured in extension settings. **Set outfit** immediately updates that character's persistent outfit state and rerenders their sprite. Default-outfit selection and outfit-category definitions remain in extension settings.
 
+### Manual interactions
+
+The Scene menu can also send a configured interaction to the LLM and show its event media immediately. Define interactions in extension settings with one entry per line:
+
+```text
+Hug | hug | I wrap my arms around {character} and hug them.
+Kiss | kiss | I lean closer and kiss {character}.
+Dance | dance | I offer my hand and invite {character} to dance with me.
+```
+
+The fields are `menu label | event media | message`. `{character}` is required and is automatically replaced by the selected present character's exact name. For example, selecting **Tess**, **Hug**, and **Send + Show** immediately sends `I wrap my arms around Tess and hug them.` as a normal user message, triggers a normal LLM response, and opens Tess's `event_hug` media on the chosen side.
+
+Interaction character choices are limited to the current scene. The event name may be written with or without the `event_` prefix and uses the same image, animated WebP, WebM, and MP4 resolution as other event controls. The user message is still sent if matching event media is unavailable; the status area reports the missing media separately.
+
 ### Mundi compatibility
 
-When [Mundi](https://github.com/tjalis/Mundi) is open, the same Event launcher automatically moves into Mundi's composer below the scene log and above the message box. Its character list comes from the characters Mundi is visibly rendering, so the popup event system can be used without changing Mundi or relying on this extension's ordinary sprite renderer. Closing Mundi returns the launcher to SillyTavern's normal chat bar.
+When [Mundi](https://github.com/tjalis/Mundi) is open, the same Scene menu automatically moves into Mundi's composer below the scene log and above the message box. Its character list comes from the characters Mundi is visibly rendering, so the popup event system can be used without changing Mundi or relying on this extension's ordinary sprite renderer. Closing Mundi returns the menu to SillyTavern's normal chat bar.
 
 Automatic `<vn-event character="NPC" image="action">` directives continue to work from generated messages, and the directive is hidden from both SillyTavern's normal chat and Mundi's scene log. If a future Mundi update changes its interface, **All cards…** remains available as a fallback.
 
