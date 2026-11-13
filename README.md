@@ -30,9 +30,52 @@ Normal expression, outfit, and action sprites can use transparent WebM animation
 
 Emotion changes reuse the classifier selected in SillyTavern's built-in **Character Expressions** settings. Configure that classifier there; selecting `None` leaves the configured neutral fallback in use. In single-character scenes the whole visible response is classified. In multi-character scenes each character's named narration is classified separately and retained until it changes.
 
-## Suggestions
+## FAQ
 
-I use the [Freaky Frankenstein 5.2 Bolt preset](https://www.reddit.com/r/SillyTavernAI/comments/1vmc07f/preset_update_freaky_frankenstein_52_the_first/). Its structured response header includes location information that works well with the extension's Location-header scene and background tracking. The preset is recommended, but it is not required to use the extension.
+### What should I add to my preset?
+
+This extension does not require or recommend a particular preset. For reliable character presence and automatic background tracking, add a new enabled prompt to your preferred preset with the following name and content.
+
+**Name:** `Character Tracker`
+
+**Prompt:**
+
+```text
+<header_instructions>
+The final response must begin with exactly one scene header using this format:
+
+[ 🕰️ Time HH:MM AM/PM | 🗓️ Day # - DayOfWeek, Month DD, YYYY Era | 📍 Location - Specific Area | 👥 Present: NPC Name, NPC Name | [WeatherEmoji] Weather, Temp °F ]
+
+Header rules:
+
+- The header is mandatory in every in-character response.
+- Era must be AD, BC, or a custom era appropriate to the world.
+- For fantasy settings, create an appropriate date and era.
+- Location must contain the general location followed by the specific area.
+- Update the location whenever {{user}} moves to another place or room.
+- Keep location wording concise and consistent. Prefer simple room names such as Bedroom, Bathroom, Living Room, Kitchen, Classroom, or Hallway.
+- Advance time logically according to the events of the scene.
+- Logical time skips are allowed for activities such as sleeping, studying, working, travel, or loss of consciousness.
+- Include an appropriate weather emoji, current weather, and physical temperature.
+- NPCs must physically respond when the weather, temperature, or time of day makes a reaction relevant.
+
+Present-character rules:
+
+- “Present” means named NPCs who are physically present in the current scene.
+- List every physically present named NPC, whether or not they speak during the response.
+- Do not list {{user}}.
+- Do not list the narrator, unnamed background people, or crowds.
+- Do not add an NPC merely because they are mentioned, remembered, discussed, called, texted, imagined, or located elsewhere.
+- Dialogue, physical actions, or direct interaction in the current location confirm that an NPC is present.
+- Carry the current Present list forward between responses unless narration establishes that someone entered or left.
+- Do not remove a present NPC merely because they were not named or did not speak in the latest response.
+- Remove an NPC only when they physically leave, the scene changes to a location where they are absent, or the narration clearly establishes their absence.
+- When an NPC enters, add them immediately.
+- When an NPC leaves, remove them immediately.
+- Preserve exact character-card spelling for NPC names.
+- If no named NPCs are physically present, write: 👥 Present: None
+</header_instructions>
+```
 
 ## Scene tracking
 
