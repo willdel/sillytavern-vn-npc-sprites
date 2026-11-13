@@ -24,9 +24,6 @@ let observedMundiRoot = null;
 let launcherSyncFrame = 0;
 let launcherRosterSignature = '';
 let interactionSending = false;
-const MUNDI_COMMON_OUTFITS = ['pajamas', 'pyjamas', 'pijama', 'sleepwear', 'casual', 'formal', 'dress', 'swimsuit', 'bikini', 'biquini', 'uniform', 'school', 'work', 'gym', 'sport', 'winter', 'summer', 'party', 'date', 'home', 'outdoor', 'armor', 'costume'];
-const mundiOutfitCache = new Map();
-const mundiOutfitLookups = new Map();
 
 async function refreshCharacterLibrary() {
   try {
@@ -275,75 +272,6 @@ function isMundiLauncher() {
   return document.getElementById('vn-event-launcher')?.classList.contains('is-mundi') ?? false;
 }
 
-function mundiOutfitOptions(characterName) {
-  if (!isMundiLauncher()) return [];
-  const character = findEventCharacter(characterName);
-  const avatar = String(character?.avatar ?? '');
-  if (!avatar) return [];
-  const baseName = String(character?.name ?? characterName).trim();
-  const override = (context.extensionSettings?.expressionOverrides ?? [])
-    .find(item => String(item?.name ?? '') === avatar.replace(/\.png$/iu, ''));
-  const overridePath = String(override?.path ?? '');
-  const current = overridePath.toLocaleLowerCase().startsWith(`${baseName.toLocaleLowerCase()}/`)
-    ? overridePath.slice(baseName.length + 1)
-    : '';
-  const saved = context.extensionSettings?.mundi?.outfits?.[avatar] ?? [];
-  const detected = mundiOutfitCache.get(avatar) ?? [];
-  const values = ['', current, ...saved, ...detected].map(value => String(value ?? '').trim());
-  const seen = new Set();
-  const options = values.filter(value => {
-    const key = value.toLocaleLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).map(value => ({
-    value,
-    label: value ? `${value.charAt(0).toLocaleUpperCase()}${value.slice(1).replace(/[-_]+/gu, ' ')}` : 'Default',
-    current: value.toLocaleLowerCase() === current.toLocaleLowerCase(),
-  }));
-  scheduleMundiOutfitLookup(character);
-  return options;
-}
-
-function scheduleMundiOutfitLookup(character) {
-  const avatar = String(character?.avatar ?? '');
-  const name = String(character?.name ?? '').trim();
-  if (!avatar || !name || mundiOutfitCache.has(avatar) || mundiOutfitLookups.has(avatar)) return;
-  const lookup = Promise.all(MUNDI_COMMON_OUTFITS.map(async outfit => {
-    try {
-      return (await getSprites(`${name}/${outfit}`)).length ? outfit : '';
-    } catch {
-      return '';
-    }
-  })).then(results => {
-    mundiOutfitCache.set(avatar, results.filter(Boolean));
-    launcherRosterSignature = '';
-    populateEventLauncherCharacters();
-  }).finally(() => mundiOutfitLookups.delete(avatar));
-  mundiOutfitLookups.set(avatar, lookup);
-}
-
-async function clickMundiOutfit(characterName, outfit) {
-  const character = findEventCharacter(characterName);
-  const avatar = String(character?.avatar ?? '');
-  const sprite = [...document.querySelectorAll('#mundi-root .mu-sprite[data-who]')]
-    .find(element => String(element.dataset.who) === avatar);
-  if (!sprite) return false;
-  sprite.click();
-  const deadline = Date.now() + 3000;
-  while (Date.now() < deadline) {
-    const button = [...document.querySelectorAll('#mundi-root button[data-act="spr-outfit"]')]
-      .find(element => String(element.dataset.who) === avatar && String(element.dataset.o ?? '').toLocaleLowerCase() === String(outfit).toLocaleLowerCase());
-    if (button) {
-      button.click();
-      return true;
-    }
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  sprite.click();
-  return false;
-}
-
 function placeLauncherInNativeChat(launcher) {
   const sendForm = document.getElementById('send_form');
   if (!sendForm) return;
@@ -445,7 +373,7 @@ function populateEventLauncherCharacters(scene = getScene()) {
   if (!ensureEventLauncher()) return;
   const roster = launcherRoster(scene);
   const outfitSignature = isMundiLauncher()
-    ? roster.map(name => `${name}=${mundiOutfitOptions(name).map(item => `${item.value}:${item.current}`).join(',')}`).join('\u0000')
+    ? ''
     : roster.map(name => `${name}=${scene.outfitStates?.[name] ?? settings().defaultOutfit}`).join('\u0000');
   const interactionSignature = parseInteractionDefinitions(settings().interactionDefinitions).map(item => `${item.label}|${item.image}|${item.template}`).join('\u0000');
   const signature = `${document.getElementById('vn-event-launcher')?.classList.contains('is-mundi')}:${roster.join('\u0000')}:${scene.activeSpeaker ?? ''}:${outfitSignature}:${outfitLabels().join('\u0000')}:${interactionSignature}`;
@@ -546,15 +474,6 @@ function syncOutfitLauncherSelection() {
   const scene = getScene();
   const character = String($('#vn-outfit-launcher-character').val() ?? '');
   const picker = $('#vn-outfit-launcher-outfit').empty();
-  if (isMundiLauncher()) {
-    const options = mundiOutfitOptions(character);
-    if (!options.length) picker.append($('<option>').val('').text(character ? 'No Mundi outfits found' : 'Select a character'));
-    else for (const option of options) picker.append($('<option>').val(option.value).text(option.label));
-    picker.val(options.find(option => option.current)?.value ?? options[0]?.value ?? '');
-    picker.prop('disabled', !character || !options.length);
-    $('#vn-outfit-launcher-apply').prop('disabled', !character || !options.length);
-    return;
-  }
   for (const label of outfitLabels()) picker.append($('<option>').val(label).text(label));
   picker.val(scene.outfitStates?.[character] ?? config.defaultOutfit);
   picker.prop('disabled', !character);
@@ -568,14 +487,6 @@ async function applyOutfitLauncherCorrection() {
   const roster = launcherRoster(scene);
   if (!character || !roster.includes(character)) return setStatus('Choose a character currently in the scene.');
   const outfit = String($('#vn-outfit-launcher-outfit').val() ?? config.defaultOutfit);
-  if (isMundiLauncher()) {
-    const option = mundiOutfitOptions(character).find(item => item.value === outfit);
-    if (!option) return setStatus(`No Mundi outfit matched for ${character}.`);
-    if (!await clickMundiOutfit(character, outfit)) return setStatus(`Mundi could not switch ${character} to ${option.label}. Open that outfit once in Mundi's Library, then try again.`);
-    launcherRosterSignature = '';
-    setStatus(`Set ${character}'s Mundi outfit to ${option.label}.`);
-    return;
-  }
   scene.outfitStates ??= {};
   scene.outfitStates[character] = outfit;
   saveScene(scene);
@@ -618,11 +529,11 @@ function updateEventLauncherAvailability() {
   if (!launcher) return;
   const config = settings();
   const mundi = isMundiLauncher();
-  launcher.hidden = !config.eventsEnabled && !config.outfitsEnabled && !mundi;
+  launcher.hidden = mundi ? !config.eventsEnabled : !config.eventsEnabled && !config.outfitsEnabled;
   $('#vn-event-launcher .vn-event-only').prop('hidden', !config.eventsEnabled);
   $('#vn-event-launcher .vn-interaction-only').prop('hidden', !config.eventsEnabled);
   $('#vn-event-launcher .vn-outfit-only').each(function () {
-    this.hidden = !config.outfitsEnabled && !mundi;
+    this.hidden = !config.outfitsEnabled || mundi;
   });
 }
 

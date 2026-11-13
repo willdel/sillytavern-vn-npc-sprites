@@ -124,10 +124,6 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   height: 1px;
 }
 
-#mundi-root #vn-event-launcher.is-mundi .vn-outfit-only:not([hidden]) {
-  visibility: visible;
-}
-
 @media (max-width: 700px) {
   #vn-event-launcher { align-items: stretch; flex-direction: column; }
   #vn-event-launcher-toggle { align-self: flex-start; }
