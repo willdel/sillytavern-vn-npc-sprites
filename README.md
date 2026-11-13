@@ -220,6 +220,8 @@ Interaction character choices are limited to the current scene. The event name m
 
 When [Mundi](https://github.com/tjalis/Mundi) is open, the same Scene menu automatically moves into Mundi's composer below the scene log and above the message box. Its character list comes from the characters Mundi is visibly rendering, so the popup event system can be used without changing Mundi or relying on this extension's ordinary sprite renderer. Closing Mundi returns the menu to SillyTavern's normal chat bar.
 
+In Mundi, the Scene menu's clothing controls read the selected character's available Mundi outfits directly from their Expression subfolders. Choosing an outfit and pressing **Set outfit** invokes Mundi's own outfit switch, including **Default**, without modifying Mundi's files. These Mundi outfits are separate from this extension's flat `outfit_state` naming system used by its native sprite renderer.
+
 Automatic `<vn-event character="NPC" image="action">` directives continue to work from generated messages, and the directive is hidden from both SillyTavern's normal chat and Mundi's scene log. If a future Mundi update changes its interface, **All cards…** remains available as a fallback.
 
 Suggested lorebook instruction:
