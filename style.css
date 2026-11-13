@@ -97,6 +97,13 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 #mundi-root #vn-event-launcher.is-mundi #vn-event-launcher-controls {
   align-items: stretch;
   flex-direction: column;
+  max-height: min(55dvh, 520px);
+  min-height: 0;
+  padding-right: 0.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 #mundi-root #vn-event-launcher.is-mundi .vn-event-launcher-field,
