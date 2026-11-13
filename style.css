@@ -70,7 +70,8 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
 #vn-event-launcher .text_pole, #vn-event-launcher .menu_button { min-height: 30px; margin: 0; }
 #vn-event-launcher-all { flex: 0 0 auto; }
 #vn-event-launcher-all.selected { box-shadow: inset 0 0 0 1px var(--SmartThemeQuoteColor); }
-#vn-event-launcher-show { flex: 0 0 auto; }
+#vn-event-launcher-show-right,
+#vn-event-launcher-show-left { flex: 0 0 auto; }
 
 #mundi-root #vn-event-launcher.is-mundi {
   grid-column: 1 / -1;
@@ -89,9 +90,9 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   #vn-event-launcher .vn-event-launcher-field { flex-basis: calc(50% - 0.4rem); }
 }
 
-#vn-event-popup[hidden] { display: none !important; }
+.vn-event-popup[hidden] { display: none !important; }
 
-#vn-event-popup {
+.vn-event-popup {
   position: fixed;
   z-index: 10010;
   margin: 0;
@@ -103,7 +104,7 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   touch-action: none;
 }
 
-#vn-event-popup .vn-event-media {
+.vn-event-popup .vn-event-media {
   display: block;
   width: 100%;
   height: 100%;
@@ -115,9 +116,9 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   filter: drop-shadow(2px 4px 8px rgb(0 0 0 / 35%));
 }
 
-#vn-event-popup .vn-event-media[hidden] { display: none !important; }
+.vn-event-popup .vn-event-media[hidden] { display: none !important; }
 
-#vn-event-popup .vn-event-handle {
+.vn-event-popup .vn-event-handle {
   position: absolute;
   top: 0;
   left: 50%;
@@ -140,12 +141,12 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   backdrop-filter: blur(4px);
 }
 
-#vn-event-popup .vn-event-handle:hover,
-#vn-event-popup .vn-event-handle:focus-within { opacity: 1; }
-#vn-event-popup .vn-event-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#vn-event-popup .vn-event-grip { font-size: 1.15rem; }
-#vn-event-popup .vn-event-reset,
-#vn-event-popup .vn-event-close {
+.vn-event-popup .vn-event-handle:hover,
+.vn-event-popup .vn-event-handle:focus-within { opacity: 1; }
+.vn-event-popup .vn-event-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-event-popup .vn-event-grip { font-size: 1.15rem; }
+.vn-event-popup .vn-event-reset,
+.vn-event-popup .vn-event-close {
   min-width: 26px;
   min-height: 26px;
   padding: 0;
@@ -157,8 +158,8 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   font-size: 1.15rem;
   line-height: 1;
 }
-#vn-event-popup .vn-event-reset:hover,
-#vn-event-popup .vn-event-close:hover { background: rgb(255 255 255 / 16%); }
+.vn-event-popup .vn-event-reset:hover,
+.vn-event-popup .vn-event-close:hover { background: rgb(255 255 255 / 16%); }
 
 @keyframes vn-npc-fade-in {
   from { opacity: 0; transform: translateY(8px); }

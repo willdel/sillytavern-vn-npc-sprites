@@ -1,11 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eventSpriteLabel, eventVideoFilename, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
+import { eventSlot, eventSpriteLabel, eventVideoFilename, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from '../modules/event-directives.js';
 
 test('parses quoted event attributes', () => {
   assert.deepEqual(parseEventDirectives('Story.\n<vn-event character="Elle" image="special_dance">'), [{
-    character: 'Elle', image: 'special_dance', raw: '<vn-event character="Elle" image="special_dance">', index: 7,
+    character: 'Elle', image: 'special_dance', slot: 'right', raw: '<vn-event character="Elle" image="special_dance">', index: 7,
   }]);
+});
+
+test('parses an explicit left slot and defaults other values to right', () => {
+  assert.equal(parseEventDirectives('<vn-event character="Blaire" image="dance" slot="left">')[0].slot, 'left');
+  assert.equal(eventSlot('LEFT'), 'left');
+  assert.equal(eventSlot('center'), 'right');
 });
 
 test('builds safe direct paths for MP4 and WebM event videos', () => {

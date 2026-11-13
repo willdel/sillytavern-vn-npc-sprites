@@ -9,11 +9,16 @@ export function parseEventDirectives(text = '') {
     directives.push({
       character: attributes.character ?? '',
       image: attributes.image ?? '',
+      slot: eventSlot(attributes.slot),
       raw: match[0],
       index: match.index ?? 0,
     });
   }
   return directives;
+}
+
+export function eventSlot(value = '') {
+  return String(value).trim().toLocaleLowerCase() === 'left' ? 'left' : 'right';
 }
 
 export function stripEventDirectives(text = '') {

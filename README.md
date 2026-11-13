@@ -117,7 +117,7 @@ event_first_kiss.webp
 event_movie_night.webp
 ```
 
-Transparent PNG and WebP images remain transparent. The popup defaults to 650 × 650 pixels near the upper-right, preserves image aspect ratio, and can be dragged by its small header. Close it with the header's **×** icon or the keyboard's **Esc** key. The reset icon or a double-click on the handle returns it to the default position. Position and configured size are remembered.
+Transparent PNG and WebP images remain transparent. Two independent 650 × 650 popups are available: one defaults to the upper-right and the other to the upper-left. Each preserves image aspect ratio, can be dragged by its small header, and remembers its own position. A popup's **×** closes only that side; **Esc** closes both. The reset icon or a double-click on a handle returns that popup to its default side.
 
 WebM and MP4 event videos are also supported. They autoplay muted, loop continuously, preserve their aspect ratio, and stop when another event replaces them or the popup closes. VP9 WebM with an alpha channel is recommended for transparent video in Chrome, Edge, and Firefox; H.264 MP4 is the broad opaque-video fallback.
 
@@ -137,17 +137,23 @@ An AI response or lorebook instruction can trigger an event with:
 <vn-event character="Elle" image="special_dance">
 ```
 
-The extension hides this directive from the rendered chat while retaining it in the stored message. It accepts the image name with or without the `event_` prefix. If several valid directives occur in one response, the last directive is shown. A directive is shown once per message/swipe unless manually replayed.
+The extension hides this directive from the rendered chat while retaining it in the stored message. It accepts the image name with or without the `event_` prefix. Directives use the right popup by default. Add `slot="left"` for the left popup:
+
+```text
+<vn-event character="Blaire" image="special_dance" slot="left">
+```
+
+A response can open both sides by including one right directive and one left directive. If several directives target the same side, the last one for that side is shown. A directive is shown once per message/swipe unless manually replayed.
 
 Manual alternatives:
 
 ```text
-/vn-event character="Elle" image="special_dance"
+/vn-event character="Elle" image="special_dance" slot="left"
 ```
 
-The slash command does not enter the roleplay history or get sent to the model. The extension settings also provide a scene-character dropdown, a searchable all-card field, an event-image dropdown, **Show event**, **Close event**, and **Replay latest directive** controls. Automatic directives can resolve any character card or configured alias even when that character is not in the scene dropdown.
+The optional slash-command `slot` is `right` by default. The command does not enter the roleplay history or get sent to the model. The extension settings also provide a scene-character dropdown, a searchable all-card field, an event-image dropdown, **Show right**, **Show left**, **Close both**, and **Replay latest directive** controls. Automatic directives can resolve any character card or configured alias even when that character is not in the scene dropdown.
 
-For faster manual use, a collapsible **Event** launcher appears directly above the chat input. It lists only characters in the current scene, loads the selected character's available `event_*` images, and opens the existing popup without adding anything to chat or starting a generation. Use **All cards…** when the desired character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
+For faster manual use, a collapsible **Event** launcher appears directly above the chat input. It lists only characters in the current scene, loads the selected character's available `event_*` images, and offers **Show right** and **Show left** without adding anything to chat or starting a generation. Showing new media replaces only the selected side. Use **All cards…** when the desired character is not currently tracked; this exposes an exact-name search without filling the normal dropdown with the entire character library.
 
 ### Mundi compatibility
 

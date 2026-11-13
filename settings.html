@@ -62,11 +62,12 @@
       <select id="vn_event_image" class="text_pole"></select>
       <small>Event images begin with event_. WebM and MP4 videos can be triggered directly, or paired with a same-named image so they appear in the dropdown.</small>
       <div class="vn-npc-actions">
-        <button id="vn_event_show" class="menu_button" type="button">Show event</button>
-        <button id="vn_event_close" class="menu_button" type="button">Close event</button>
+        <button id="vn_event_show_right" class="menu_button" type="button">Show right</button>
+        <button id="vn_event_show_left" class="menu_button" type="button">Show left</button>
+        <button id="vn_event_close" class="menu_button" type="button">Close both</button>
         <button id="vn_event_replay" class="menu_button" type="button">Replay latest directive</button>
       </div>
-      <small>Automatic format: &lt;vn-event character="Elle" image="special_dance"&gt;. Manual command: /vn-event character="Elle" image="special_dance".</small>
+      <small>Automatic format: &lt;vn-event character="Elle" image="special_dance" slot="left"&gt;. Omit slot for the right side. Manual command: /vn-event character="Elle" image="special_dance" slot="left".</small>
       <div class="vn-npc-actions">
         <button id="vn_npc_test" class="menu_button" type="button">Test latest AI message</button>
         <button id="vn_npc_add" class="menu_button" type="button">Add to scene</button>

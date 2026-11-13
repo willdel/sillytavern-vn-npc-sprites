@@ -6,13 +6,13 @@ import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDe
 import { expressionSamples, updateExpressionStates } from './modules/expression-tracker.js';
 import { parseBackgroundMappings, resolveBackground } from './modules/background-tracker.js';
 import { DEFAULT_OUTFIT_DEFINITIONS, detectOutfits, parseOutfitDefinitions, updateOutfitStates } from './modules/outfit-tracker.js';
-import { eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
+import { eventSlot, eventVideoPath, isEventVideoRequest, listEventSprites, matchingVideoPaths, parseEventDirectives, resolveEventSprite, stripEventDirectives } from './modules/event-directives.js';
 import { closeEventPopup, removeEventPopup, showEventPopup } from './modules/event-popup.js';
 import { resolveMundiCharacterNames } from './modules/mundi-adapter.js';
 
 const MODULE_NAME = 'vn_npc_sprites';
 const EXTENSION_FOLDER = 'third-party/sillytavern-vn-npc-sprites';
-const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', eventsEnabled: true, eventSize: 650, eventPosition: null, eventLauncherExpanded: false, scenes: {} });
+const DEFAULTS = Object.freeze({ enabled: true, fallbackLabel: 'neutral', aliases: '', expressionsEnabled: true, actionsEnabled: true, actionDefinitions: DEFAULT_ACTION_DEFINITIONS, outfitsEnabled: true, defaultOutfit: 'casual', outfitDefinitions: DEFAULT_OUTFIT_DEFINITIONS, backgroundsEnabled: true, backgroundMappings: '', eventsEnabled: true, eventSize: 650, eventPosition: null, eventPositions: null, eventLauncherExpanded: false, scenes: {} });
 let context;
 let characterLibrary = [];
 const shownEventDirectives = new Set();
@@ -57,6 +57,9 @@ function settings() {
   config.eventsEnabled ??= DEFAULTS.eventsEnabled;
   config.eventSize ??= DEFAULTS.eventSize;
   config.eventPosition ??= DEFAULTS.eventPosition;
+  config.eventPositions ??= { right: config.eventPosition, left: null };
+  config.eventPositions.right ??= config.eventPosition;
+  config.eventPositions.left ??= null;
   config.eventLauncherExpanded ??= DEFAULTS.eventLauncherExpanded;
   config.scenes ??= {};
   return config;
@@ -171,7 +174,8 @@ function ensureEventLauncher() {
         <span>Event</span>
         <select id="vn-event-launcher-image" class="text_pole" aria-label="Event image"></select>
       </label>
-      <button id="vn-event-launcher-show" class="menu_button" type="button" disabled>Show</button>
+      <button id="vn-event-launcher-show-right" class="menu_button" type="button" disabled>Show right</button>
+      <button id="vn-event-launcher-show-left" class="menu_button" type="button" disabled>Show left</button>
     </div>
   `;
   const inputRow = sendForm.querySelector('#nonQRFormItems');
@@ -187,8 +191,8 @@ function ensureEventLauncher() {
     const character = findEventCharacter(this.value)?.name ?? '';
     populateEventLauncherImages(character);
   });
-  $('#vn-event-launcher-show').on('click', async () => {
-    const result = await displayEvent(selectedEventLauncherCharacter(), String($('#vn-event-launcher-image').val() ?? ''));
+  for (const slot of ['right', 'left']) $(`#vn-event-launcher-show-${slot}`).on('click', async () => {
+    const result = await displayEvent(selectedEventLauncherCharacter(), String($('#vn-event-launcher-image').val() ?? ''), slot);
     setStatus(result.message);
   });
 
@@ -344,7 +348,7 @@ function populateEventLauncherCharacters(scene = getScene()) {
 async function populateEventLauncherImages(characterName) {
   const request = ++launcherEventRequest;
   const picker = $('#vn-event-launcher-image').empty().prop('disabled', true);
-  const show = $('#vn-event-launcher-show').prop('disabled', true);
+  const show = $('#vn-event-launcher-show-right, #vn-event-launcher-show-left').prop('disabled', true);
   if (!characterName) {
     picker.append($('<option>').val('').text('Select a character'));
     return;
@@ -386,26 +390,27 @@ function selectedEventCharacter() {
   return findEventCharacter(searched)?.name ?? String($('#vn_event_character').val() ?? '');
 }
 
-async function displayEvent(characterValue, imageValue) {
+async function displayEvent(characterValue, imageValue, slotValue = 'right') {
   const config = settings();
+  const slot = eventSlot(slotValue);
   if (!config.eventsEnabled) return { ok: false, message: 'VN event media is disabled.' };
   const character = findEventCharacter(characterValue);
   if (!character) return { ok: false, message: `No character card or alias matched: ${characterValue || '(missing)'}.` };
   if (isEventVideoRequest(imageValue)) {
     const videoPath = eventVideoPath(character.name, imageValue);
     if (!videoPath || !await eventVideoExists(videoPath)) return { ok: false, message: `No event video found for ${character.name}: ${imageValue}.` };
-    showEventMedia(videoPath, `${character.name} - ${String(imageValue).replace(/^event_/i, '').replace(/\.(?:mp4|webm)$/i, '')}`, 'video');
-    return { ok: true, message: `Playing event video ${String(imageValue).replace(/^event_/i, '')} for ${character.name}.` };
+    showEventMedia(videoPath, `${character.name} - ${String(imageValue).replace(/^event_/i, '').replace(/\.(?:mp4|webm)$/i, '')}`, 'video', slot);
+    return { ok: true, message: `Playing event video ${String(imageValue).replace(/^event_/i, '')} for ${character.name} on the ${slot}.` };
   }
   const sprite = resolveEventSprite(await getSprites(character.name), imageValue);
   if (!sprite?.path) return { ok: false, message: `No event sprite found for ${character.name}: event_${String(imageValue).replace(/^event_/i, '')}.` };
   const matchingVideo = await firstExistingEventVideo(matchingVideoPaths(sprite.path));
   if (matchingVideo) {
-    showEventMedia(matchingVideo, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'video');
-    return { ok: true, message: `Playing matching event video for ${character.name}: ${matchingVideo.split('/').at(-1)}.` };
+    showEventMedia(matchingVideo, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'video', slot);
+    return { ok: true, message: `Playing matching event video for ${character.name} on the ${slot}: ${matchingVideo.split('/').at(-1)}.` };
   }
-  showEventMedia(sprite.path, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'image');
-  return { ok: true, message: `Showing event image ${sprite.label} for ${character.name}.` };
+  showEventMedia(sprite.path, `${character.name} - ${String(sprite.label).replace(/^event_/i, '')}`, 'image', slot);
+  return { ok: true, message: `Showing event image ${sprite.label} for ${character.name} on the ${slot}.` };
 }
 
 async function eventVideoExists(path) {
@@ -422,16 +427,17 @@ async function firstExistingEventVideo(paths) {
   return '';
 }
 
-function showEventMedia(path, title, type) {
+function showEventMedia(path, title, type, slot) {
   const config = settings();
   showEventPopup({
     path,
     title,
     type,
     size: config.eventSize,
-    position: config.eventPosition,
+    slot,
+    position: config.eventPositions[slot],
     onMove: position => {
-      config.eventPosition = position;
+      config.eventPositions[slot] = position;
       context.saveSettingsDebounced();
     },
   });
@@ -454,14 +460,18 @@ async function processEventDirectives(messageId, text, { force = false } = {}) {
   hideRenderedEventDirectives(messageId);
   const directives = parseEventDirectives(text).filter(item => item.character && item.image);
   if (!directives.length || !settings().eventsEnabled) return null;
-  const directive = directives.at(-1);
   const message = Number.isInteger(messageId) ? context.chat[messageId] : null;
-  const key = `${sceneKey()}:${messageId}:${message?.swipe_id ?? 0}:${directive.raw}`;
-  if (!force && shownEventDirectives.has(key)) return null;
-  shownEventDirectives.add(key);
-  const result = await displayEvent(directive.character, directive.image);
-  $('#vn_npc_status').append(` ${result.message}`);
-  return result;
+  const bySlot = new Map();
+  for (const directive of directives) bySlot.set(eventSlot(directive.slot), directive);
+  const results = [];
+  for (const [slot, directive] of bySlot) {
+    const key = `${sceneKey()}:${messageId}:${message?.swipe_id ?? 0}:${slot}:${directive.raw}`;
+    if (!force && shownEventDirectives.has(key)) continue;
+    shownEventDirectives.add(key);
+    results.push(await displayEvent(directive.character, directive.image, slot));
+  }
+  if (results.length) $('#vn_npc_status').append(` ${results.map(result => result.message).join(' ')}`);
+  return results.at(-1) ?? null;
 }
 
 function setStatus(message) {
@@ -686,13 +696,13 @@ function bindSettings() {
     const match = findEventCharacter(this.value);
     if (match) populateEventPicker(match.name);
   });
-  $('#vn_event_show').on('click', async () => {
-    const result = await displayEvent(selectedEventCharacter(), String($('#vn_event_image').val() ?? ''));
+  for (const slot of ['right', 'left']) $(`#vn_event_show_${slot}`).on('click', async () => {
+    const result = await displayEvent(selectedEventCharacter(), String($('#vn_event_image').val() ?? ''), slot);
     setStatus(result.message);
   });
   $('#vn_event_close').on('click', () => {
     closeEventPopup();
-    setStatus('Event image closed.');
+    setStatus('Both event popups closed.');
   });
   $('#vn_event_replay').on('click', async () => {
     const messageId = context.chat.findLastIndex(item => !item.is_user && !item.is_system);
@@ -770,7 +780,7 @@ function registerEventSlashCommand() {
   context.SlashCommandParser.addCommandObject(context.SlashCommand.fromProps({
     name: 'vn-event',
     callback: async args => {
-      const result = await displayEvent(String(args.character ?? ''), String(args.image ?? ''));
+      const result = await displayEvent(String(args.character ?? ''), String(args.image ?? ''), String(args.slot ?? 'right'));
       setStatus(result.message);
       return result.message;
     },
@@ -787,8 +797,14 @@ function registerEventSlashCommand() {
         typeList: [context.ARGUMENT_TYPE.STRING],
         isRequired: true,
       }),
+      context.SlashCommandNamedArgument.fromProps({
+        name: 'slot',
+        description: 'Popup side: right (default) or left.',
+        typeList: [context.ARGUMENT_TYPE.STRING],
+        isRequired: false,
+      }),
     ],
-    helpString: 'Shows draggable VN event media. Example: /vn-event character="Elle" image="special_dance" or image="special_dance.webm"',
+    helpString: 'Shows draggable VN event media. Example: /vn-event character="Elle" image="special_dance.webm" slot="left"',
     returns: 'Event display status.',
   }));
 }
