@@ -1,5 +1,5 @@
 import { buildCandidates } from './modules/detection.js';
-import { chooseOutfitSprite, clearSpriteCache, getCardAvatarPath, getSprites } from './modules/sprites.js';
+import { chooseOutfitSprite, clearSpriteCache, getCardAvatarPath, getMatchingSpriteVideoPath, getSprites } from './modules/sprites.js';
 import { clearNpcSprites, removeRenderer, renderNpcSprites } from './modules/renderer.js';
 import { analyzeScene, updateScene } from './modules/scene-tracker.js';
 import { currentAction, DEFAULT_ACTION_DEFINITIONS, detectActions, parseActionDefinitions, updateActionStates } from './modules/action-tracker.js';
@@ -673,9 +673,11 @@ async function renderScene(scene, candidates) {
       const sprite = chooseOutfitSprite(await getSprites(match.name), { outfit, defaultOutfit: config.defaultOutfit, action, expression, fallback: config.fallbackLabel });
       const avatarPath = getCardAvatarPath(match.character);
       const path = sprite?.path ?? avatarPath;
+      const videoPath = sprite?.path ? await getMatchingSpriteVideoPath(sprite.path) : '';
       return path ? {
         name: match.name,
         path,
+        videoPath,
         label: sprite?.label ?? 'card avatar',
         action,
         expression,
@@ -690,11 +692,13 @@ async function renderScene(scene, candidates) {
     if (!visible.length) return setStatus('Matched characters, but none have usable sprites.');
     const fallbacks = visible.filter(item => item.cardAvatar).map(item => item.name);
     const fallbackNote = fallbacks.length ? ` Card avatar fallback: ${fallbacks.join(', ')}.` : '';
+    const videos = visible.filter(item => item.videoPath).map(item => item.name);
+    const videoNote = videos.length ? ` WebM sprites: ${videos.join(', ')}.` : '';
     const actions = visible.filter(item => item.action).map(item => `${item.name}: ${item.action}`);
     const actionNote = actions.length ? ` Actions: ${actions.join(', ')}.` : '';
     const expressions = visible.filter(item => !item.action && item.expression).map(item => `${item.name}: ${item.expression}`);
     const expressionNote = expressions.length ? ` Expressions: ${expressions.join(', ')}.` : '';
-    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${actionNote}${expressionNote}${fallbackNote}`);
+    setStatus(`Showing ${visible.map(item => item.name).join(', ')} (${visible.length}/5).${actionNote}${expressionNote}${videoNote}${fallbackNote}`);
   } catch (error) {
     console.error(`[${MODULE_NAME}]`, error);
     clearNpcSprites();

@@ -1,4 +1,5 @@
 const cache = new Map();
+const videoCache = new Map();
 
 export async function getSprites(name, { force = false } = {}) {
   if (!force && cache.has(name)) return cache.get(name);
@@ -31,6 +32,25 @@ export function chooseOutfitSprite(sprites, { outfit, defaultOutfit = 'casual', 
 
 export function clearSpriteCache() {
   cache.clear();
+  videoCache.clear();
+}
+
+export function matchingSpriteVideoPath(spritePath = '') {
+  const [clean, query = ''] = String(spritePath).split('?');
+  if (!/\.[a-z0-9]+$/iu.test(clean)) return '';
+  const path = clean.replace(/\.[a-z0-9]+$/iu, '.webm');
+  return query ? `${path}?${query}` : path;
+}
+
+export async function getMatchingSpriteVideoPath(spritePath, { force = false } = {}) {
+  const path = matchingSpriteVideoPath(spritePath);
+  if (!path) return '';
+  if (!force && videoCache.has(path)) return videoCache.get(path);
+  const lookup = fetch(path, { method: 'HEAD', cache: 'no-store' })
+    .then(response => response.ok && String(response.headers.get('content-type') ?? '').toLocaleLowerCase().startsWith('video/') ? path : '')
+    .catch(() => '');
+  videoCache.set(path, lookup);
+  return lookup;
 }
 
 export function getCardAvatarPath(character) {

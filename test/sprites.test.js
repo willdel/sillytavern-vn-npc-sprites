@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseOutfitSprite, chooseSprite, getCardAvatarPath } from '../modules/sprites.js';
+import { chooseOutfitSprite, chooseSprite, getCardAvatarPath, matchingSpriteVideoPath } from '../modules/sprites.js';
 
 test('prefers a requested expression sprite', () => {
   const sprites = [{ label: 'neutral', path: '/neutral.png' }, { label: 'joy', path: '/joy.png' }];
@@ -25,5 +25,11 @@ test('prefers an outfit action then outfit expression', () => {
 test('uses unprefixed sprites for the default outfit', () => {
   const sprites = [{ label: 'casual_joy', path: '/wrong.png' }, { label: 'joy', path: '/joy.png' }];
   assert.equal(chooseOutfitSprite(sprites, { outfit: 'casual', defaultOutfit: 'casual', expression: 'joy' }).path, '/joy.png');
+});
+
+test('derives a same-named WebM path from a sprite poster', () => {
+  assert.equal(matchingSpriteVideoPath('/characters/Tess/swimwear_dancing.webp'), '/characters/Tess/swimwear_dancing.webm');
+  assert.equal(matchingSpriteVideoPath('/characters/Tess/joy.png?t=123'), '/characters/Tess/joy.webm?t=123');
+  assert.equal(matchingSpriteVideoPath('/characters/Tess/no-extension'), '');
 });
 
