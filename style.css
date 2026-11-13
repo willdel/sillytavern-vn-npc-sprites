@@ -83,9 +83,37 @@ body.vn-npc-routing-active #visual-novel-wrapper { visibility: hidden; }
   order: -1;
   width: auto;
   padding: 0.35rem 0.5rem;
+  align-items: stretch;
+  flex-direction: column;
   background: var(--panel, rgb(20 23 28 / 88%));
   border: 1px solid var(--line, rgb(255 255 255 / 14%));
   border-radius: 10px;
+}
+
+#mundi-root #vn-event-launcher.is-mundi #vn-event-launcher-toggle {
+  align-self: flex-start;
+}
+
+#mundi-root #vn-event-launcher.is-mundi #vn-event-launcher-controls {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+#mundi-root #vn-event-launcher.is-mundi .vn-event-launcher-field,
+#mundi-root #vn-event-launcher.is-mundi .vn-interaction-slot {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+#mundi-root #vn-event-launcher.is-mundi .menu_button:not(#vn-event-launcher-toggle) {
+  width: 100%;
+}
+
+#mundi-root #vn-event-launcher.is-mundi .vn-launcher-divider {
+  width: 100%;
+  min-height: 1px;
+  height: 1px;
 }
 
 @media (max-width: 700px) {
